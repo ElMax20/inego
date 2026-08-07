@@ -1,0 +1,108 @@
+import customtkinter as ctk
+from views.components import MetricCard, PrimaryButton, AccentButton
+from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_WARNING, COLOR_SUCCESS
+from database.connection import db
+
+class DashboardView(ctk.CTkFrame):
+    def __init__(self, master, navigate_callback=None, **kwargs):
+        super().__init__(master, fg_color=COLOR_BG_MAIN, corner_radius=0, **kwargs)
+        self.navigate_callback = navigate_callback
+
+        self.scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.scroll.pack(fill="both", expand=True, padx=20, pady=20)
+
+        self.kpi_frame = ctk.CTkFrame(self.scroll, fg_color="transparent")
+        self.kpi_frame.pack(fill="x", pady=(0, 20))
+
+        self.kpi_ventas = MetricCard(self.kpi_frame, "Ventas Totales Mes", "$0.00", "💵", "Acumulado Facturado", COLOR_SUCCESS)
+        self.kpi_ventas.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        self.kpi_gastos = MetricCard(self.kpi_frame, "Gastos y Operativa", "$0.00", "🧾", "Agua, Logística y Gestión", COLOR_ACCENT)
+        self.kpi_gastos.pack(side="left", fill="x", expand=True, padx=5)
+
+        self.kpi_credito = MetricCard(self.kpi_frame, "Créditos B2B Vivos (72d)", "$0.00", "⏳", "Por Cobrar a Gobierno/B2B", COLOR_WARNING)
+        self.kpi_credito.pack(side="left", fill="x", expand=True, padx=5)
+
+        self.kpi_cotiz = MetricCard(self.kpi_frame, "Cotizaciones Activas", "0", "📋", "Historial de Clientes", COLOR_ACCENT)
+        self.kpi_cotiz.pack(side="left", fill="x", expand=True, padx=(10, 0))
+
+        middle_frame = ctk.CTkFrame(self.scroll, fg_color="transparent")
+        middle_frame.pack(fill="x", pady=(0, 20))
+
+        stock_card = ctk.CTkFrame(middle_frame, fg_color=COLOR_BG_CARD, corner_radius=12)
+        stock_card.pack(side="left", fill="both", expand=True, padx=(0, 10))
+
+        st_title = ctk.CTkLabel(
+            stock_card, text="📦 Control de Stock Permanente (Items Fijos)",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        )
+        st_title.pack(anchor="w", padx=16, pady=(14, 8))
+
+        st_desc = ctk.CTkLabel(
+            stock_card, text="Monitoreo de productos de rotación continua (Cuchillas de doble filo, Licencias Office):",
+            font=ctk.CTkFont(family="Segoe UI", size=11), text_color=COLOR_TEXT_MUTED
+        )
+        st_desc.pack(anchor="w", padx=16, pady=(0, 10))
+
+        self.stock_list_frame = ctk.CTkFrame(stock_card, fg_color="transparent")
+        self.stock_list_frame.pack(fill="both", expand=True, padx=16, pady=(0, 14))
+
+        actions_card = ctk.CTkFrame(middle_frame, fg_color=COLOR_BG_CARD, corner_radius=12)
+        actions_card.pack(side="right", fill="both", expand=True, padx=(10, 0))
+
+        ac_title = ctk.CTkLabel(
+            actions_card, text="⚡ Accesos Rápidos y Logística",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            text_color=COLOR_TEXT_PRIMARY
+        )
+        ac_title.pack(anchor="w", padx=16, pady=(14, 12))
+
+        btn1 = PrimaryButton(actions_card, "Nueva Cotización / Comparar", icon="➕", command=lambda: self._nav("quotes"))
+        btn1.pack(fill="x", padx=16, pady=4)
+
+        btn2 = AccentButton(actions_card, "Registrar Gasto u Operativa", icon="💸", command=lambda: self._nav("expenses"))
+        btn2.pack(fill="x", padx=16, pady=4)
+
+        btn3 = PrimaryButton(actions_card, "Descargar Diagrama de Gantt Excel", icon="📊", command=lambda: self._nav("reports"))
+        btn3.pack(fill="x", padx=16, pady=4)
+
+        btn4 = AccentButton(actions_card, "Calcular Nómina de 3 Socios ($50 + 5%)", icon="👔", command=lambda: self._nav("payroll"))
+        btn4.pack(fill="x", padx=16, pady=(4, 14))
+
+        self.refresh_data()
+
+    def _nav(self, route):
+        if self.navigate_callback:
+            self.navigate_callback(route)
+
+    def refresh_data(self):
+        r_ventas = db.fetch_one("SELECT SUM(total) as total FROM cotizaciones WHERE estado IN ('Facturada', 'Aprobada')")
+        tot_ventas = float(r_ventas['total'] or 0.0) if r_ventas else 0.0
+        self.kpi_ventas.set_value(f"${tot_ventas:,.2f}")
+
+        r_gastos = db.fetch_one("SELECT SUM(monto) as total FROM gastos")
+        tot_gastos = float(r_gastos['total'] or 0.0) if r_gastos else 0.0
+        self.kpi_gastos.set_value(f"${tot_gastos:,.2f}")
+
+        r_cred = db.fetch_one("SELECT SUM(total) as total FROM cotizaciones WHERE es_credito_72dias = 1 AND estado = 'Facturada'")
+        tot_cred = float(r_cred['total'] or 0.0) if r_cred else 0.0
+        self.kpi_credito.set_value(f"${tot_cred:,.2f}")
+
+        r_cot = db.fetch_one("SELECT COUNT(*) as cnt FROM cotizaciones")
+        cnt_cot = r_cot['cnt'] if r_cot else 0
+        self.kpi_cotiz.set_value(str(cnt_cot))
+
+        for widget in self.stock_list_frame.winfo_children():
+            widget.destroy()
+
+        perm_prods = db.fetch_all("SELECT * FROM productos WHERE tipo_stock = 'Permanente'")
+        for p in perm_prods:
+            row = ctk.CTkFrame(self.stock_list_frame, fg_color="#1E293B", corner_radius=6)
+            row.pack(fill="x", pady=3)
+
+            lbl = ctk.CTkLabel(row, text=f"• {p['nombre']} [{p['codigo']}]", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
+            lbl.pack(side="left", padx=10, pady=6)
+
+            st_val = ctk.CTkLabel(row, text=f"Stock Actual: {p['stock_actual']} unidades", font=ctk.CTkFont(size=12), text_color=COLOR_ACCENT)
+            st_val.pack(side="right", padx=10, pady=6)
