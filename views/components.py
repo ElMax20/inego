@@ -109,22 +109,24 @@ class MetricCard(ctk.CTkFrame):
 class PrimaryButton(ctk.CTkButton):
     def __init__(self, master, text, command=None, icon=None, **kwargs):
         full_text = f"{icon} {text}" if icon else text
+        btn_height = kwargs.pop("height", 36)
         super().__init__(
             master, text=full_text, command=command,
             fg_color=COLOR_PRIMARY, hover_color=COLOR_PRIMARY_HOVER,
             text_color=COLOR_TEXT_PRIMARY, corner_radius=8,
             font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
-            height=36, **kwargs
+            height=btn_height, **kwargs
         )
 
 
 class AccentButton(ctk.CTkButton):
     def __init__(self, master, text, command=None, icon=None, **kwargs):
         full_text = f"{icon} {text}" if icon else text
+        btn_height = kwargs.pop("height", 36)
         super().__init__(
             master, text=full_text, command=command,
             fg_color=COLOR_ACCENT, hover_color=COLOR_ACCENT_HOVER,
             text_color=COLOR_TEXT_PRIMARY, corner_radius=8,
             font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
-            height=36, **kwargs
+            height=btn_height, **kwargs
         )
