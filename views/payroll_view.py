@@ -2,7 +2,7 @@ import customtkinter as ctk
 import os
 from views.components import PrimaryButton, AccentButton
 from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_SUCCESS, PARTNERS
-from models.models import PayrollModel
+from models.models import PayrollModel, AuditLogModel
 from utils.pdf_generator import generate_payslip_pdf
 
 class PayrollView(ctk.CTkFrame):
@@ -109,6 +109,15 @@ class PayrollView(ctk.CTkFrame):
 
             if per and soc:
                 PayrollModel.calculate_and_save(per, soc, bono_val, e_obs.get().strip())
+                
+                root_win = self.winfo_toplevel()
+                user_name = root_win.current_user.get('nombre_completo', 'Socio 3 - Proceso Contable') if hasattr(root_win, 'current_user') and root_win.current_user else 'Socio 3 - Proceso Contable'
+                AuditLogModel.log(
+                    user_name,
+                    "Generación Rol",
+                    f"Generado Rol de Pago de Socio para {soc} para el período {per}"
+                )
+                
                 dialog.destroy()
                 self.load_payroll()
 

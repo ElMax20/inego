@@ -8,9 +8,15 @@ from models.models import UserModel, AuditLogModel
 
 class UsersView(ctk.CTkFrame):
     """ Vista de Gestión de Usuarios (RF1.4) y Registro de Auditoría (RF1.3) """
+    @property
+    def current_user(self):
+        root = self.winfo_toplevel()
+        if hasattr(root, 'current_user') and root.current_user:
+            return root.current_user
+        return {}
+
     def __init__(self, master, current_user=None, **kwargs):
         super().__init__(master, fg_color=COLOR_BG_MAIN, corner_radius=0, **kwargs)
-        self.current_user = current_user or {}
 
         top_bar = ctk.CTkFrame(self, fg_color=COLOR_BG_CARD, height=60, corner_radius=0)
         top_bar.pack(fill="x", side="top")
@@ -187,3 +193,7 @@ class UsersView(ctk.CTkFrame):
                 font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_ACCENT
             )
             time_lbl.pack(side="right", padx=14)
+
+    def refresh_data(self):
+        self.load_users()
+        self.load_audit_logs()

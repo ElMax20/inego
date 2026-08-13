@@ -65,6 +65,10 @@ class ProductModel:
         return db.fetch_all("SELECT * FROM productos ORDER BY id DESC")
 
     @staticmethod
+    def get_by_id(product_id):
+        return db.fetch_one("SELECT * FROM productos WHERE id = %s", (product_id,))
+
+    @staticmethod
     def create(codigo, nombre, categoria, descripcion, tipo_stock, stock_actual, precio_referencial):
         query = """
             INSERT INTO productos (codigo, nombre, categoria, descripcion, tipo_stock, stock_actual, precio_referencial)
@@ -93,20 +97,46 @@ class SupplierModel:
         return db.fetch_all("SELECT * FROM categorias_proveedor ORDER BY nombre ASC")
 
     @staticmethod
-    def create(nombre_empresa, ruc_cedula, contacto_nombre, telefono, email, ubicacion, categoria_id, tipo_proveedor):
+    def create(nombre_empresa, ruc_cedula, contacto_nombre, telefono, email, direccion, ubicacion, categoria_id, tipo_proveedor):
         query = """
-            INSERT INTO proveedores (nombre_empresa, ruc_cedula, contacto_nombre, telefono, email, ubicacion, categoria_id, tipo_proveedor)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO proveedores (nombre_empresa, ruc_cedula, contacto_nombre, telefono, email, direccion, ubicacion, categoria_id, tipo_proveedor)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        return db.execute_query(query, (nombre_empresa, ruc_cedula, contacto_nombre, telefono, email, ubicacion, categoria_id, tipo_proveedor))
+        return db.execute_query(query, (nombre_empresa, ruc_cedula, contacto_nombre, telefono, email, direccion, ubicacion, categoria_id, tipo_proveedor))
 
     @staticmethod
     def link_product(producto_id, proveedor_id, precio_cotizado, tiempo_entrega_dias, disponibilidad):
+        # Verificar si ya existe la relación
+        exists = db.fetch_one(
+            "SELECT id FROM producto_proveedor WHERE producto_id = %s AND proveedor_id = %s",
+            (producto_id, proveedor_id)
+        )
+        if exists:
+            # Actualizar costo, entrega y fecha
+            query = """
+                UPDATE producto_proveedor
+                SET precio_cotizado = %s, tiempo_entrega_dias = %s, estado_disponibilidad = %s, fecha_ultima_cotizacion = CURRENT_DATE
+                WHERE producto_id = %s AND proveedor_id = %s
+            """
+            return db.execute_query(query, (precio_cotizado, tiempo_entrega_dias, disponibilidad, producto_id, proveedor_id))
+        else:
+            # Crear nueva relación
+            query = """
+                INSERT INTO producto_proveedor (producto_id, proveedor_id, precio_cotizado, tiempo_entrega_dias, estado_disponibilidad, fecha_ultima_cotizacion)
+                VALUES (%s, %s, %s, %s, %s, CURRENT_DATE)
+            """
+            return db.execute_query(query, (producto_id, proveedor_id, precio_cotizado, tiempo_entrega_dias, disponibilidad))
+
+    @staticmethod
+    def get_product_suppliers(product_id):
         query = """
-            INSERT INTO producto_proveedor (producto_id, proveedor_id, precio_cotizado, tiempo_entrega_dias, estado_disponibilidad, fecha_ultima_cotizacion)
-            VALUES (%s, %s, %s, %s, %s, CURRENT_DATE)
+            SELECT pp.*, p.nombre_empresa, p.tipo_proveedor
+            FROM producto_proveedor pp
+            JOIN proveedores p ON pp.proveedor_id = p.id
+            WHERE pp.producto_id = %s
+            ORDER BY pp.precio_cotizado ASC
         """
-        return db.execute_query(query, (producto_id, proveedor_id, precio_cotizado, tiempo_entrega_dias, disponibilidad))
+        return db.fetch_all(query, (product_id,))
 
 
 class ClientModel:
@@ -175,6 +205,33 @@ class QuoteModel:
         if not phone_clean.startswith("593") and len(phone_clean) == 10:
             phone_clean = "593" + phone_clean[1:]
         return f"https://wa.me/{phone_clean}?text={encoded_msg}"
+
+    @staticmethod
+    def update_status(quote_id, new_status):
+        query = "UPDATE cotizaciones SET estado = %s WHERE id = %s"
+        return db.execute_query(query, (new_status, quote_id))
+
+    @staticmethod
+    def convert_to_sales_order(quote_id):
+        quote = db.fetch_one("SELECT * FROM cotizaciones WHERE id = %s", (quote_id,))
+        if not quote:
+            return None
+        
+        import random
+        rand_num = random.randint(1000, 9999)
+        numero_orden = f"OV-{datetime.now().strftime('%Y%m%d')}-{rand_num}"
+        
+        query_order = """
+            INSERT INTO ordenes_venta (numero_orden, cotizacion_id, cliente_id, subtotal, iva, total, estado)
+            VALUES (%s, %s, %s, %s, %s, %s, 'Generada')
+        """
+        db.execute_query(
+            query_order, 
+            (numero_orden, quote['id'], quote['cliente_id'], quote['subtotal'], quote['iva'], quote['total'])
+        )
+        
+        QuoteModel.update_status(quote_id, 'Facturada')
+        return numero_orden
 
 
 class ExpenseModel:

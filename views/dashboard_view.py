@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from views.components import MetricCard, PrimaryButton, AccentButton
-from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_WARNING, COLOR_SUCCESS
+from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_WARNING, COLOR_SUCCESS, COLOR_DANGER
 from database.connection import db
 
 class DashboardView(ctk.CTkFrame):
@@ -98,11 +98,18 @@ class DashboardView(ctk.CTkFrame):
 
         perm_prods = db.fetch_all("SELECT * FROM productos WHERE tipo_stock = 'Permanente'")
         for p in perm_prods:
-            row = ctk.CTkFrame(self.stock_list_frame, fg_color="#1E293B", corner_radius=6)
+            is_alert = p['stock_actual'] <= p['stock_minimo']
+            row_color = "#311c1c" if is_alert else "#1E293B"
+            text_color = COLOR_DANGER if is_alert else COLOR_TEXT_PRIMARY
+            val_color = COLOR_DANGER if is_alert else COLOR_ACCENT
+
+            row = ctk.CTkFrame(self.stock_list_frame, fg_color=row_color, corner_radius=6)
             row.pack(fill="x", pady=3)
 
-            lbl = ctk.CTkLabel(row, text=f"• {p['nombre']} [{p['codigo']}]", font=ctk.CTkFont(size=12, weight="bold"), text_color=COLOR_TEXT_PRIMARY)
+            lbl_text = f"🚨 {p['nombre']} [{p['codigo']}]" if is_alert else f"• {p['nombre']} [{p['codigo']}]"
+            lbl = ctk.CTkLabel(row, text=lbl_text, font=ctk.CTkFont(size=12, weight="bold"), text_color=text_color)
             lbl.pack(side="left", padx=10, pady=6)
 
-            st_val = ctk.CTkLabel(row, text=f"Stock Actual: {p['stock_actual']} unidades", font=ctk.CTkFont(size=12), text_color=COLOR_ACCENT)
+            val_text = f"ALERTA: {p['stock_actual']} unids (Mín: {p['stock_minimo']})" if is_alert else f"Stock Actual: {p['stock_actual']} unidades"
+            st_val = ctk.CTkLabel(row, text=val_text, font=ctk.CTkFont(size=12, weight="bold" if is_alert else "normal"), text_color=val_color)
             st_val.pack(side="right", padx=10, pady=6)

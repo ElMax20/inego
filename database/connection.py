@@ -93,6 +93,7 @@ class DatabaseManager:
                     contacto_nombre TEXT,
                     telefono TEXT,
                     email TEXT,
+                    direccion TEXT,
                     ubicacion TEXT DEFAULT 'Guayaquil',
                     categoria_id INTEGER,
                     tipo_proveedor TEXT DEFAULT 'Guayaquil (90%)',
@@ -208,6 +209,22 @@ class DatabaseManager:
                 );
                 """)
 
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS ordenes_venta (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    numero_orden TEXT UNIQUE NOT NULL,
+                    cotizacion_id INTEGER NOT NULL,
+                    cliente_id INTEGER NOT NULL,
+                    fecha_orden DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    subtotal REAL NOT NULL,
+                    iva REAL NOT NULL,
+                    total REAL NOT NULL,
+                    estado TEXT DEFAULT 'Generada',
+                    FOREIGN KEY (cotizacion_id) REFERENCES cotizaciones(id),
+                    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+                );
+                """)
+
                 cursor.execute("SELECT COUNT(*) as cnt FROM usuarios")
                 if cursor.fetchone()[0] == 0:
                     self._seed_initial_users(cursor)
@@ -215,6 +232,21 @@ class DatabaseManager:
                 cursor.execute("SELECT COUNT(*) as cnt FROM categorias_proveedor")
                 if cursor.fetchone()[0] == 0:
                     self._seed_initial_data(cursor)
+
+                # Asegurar detalles para cotizaciones semilla si no existen
+                cursor.execute("SELECT COUNT(*) as cnt FROM cotizacion_detalles")
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute("""
+                    INSERT INTO cotizacion_detalles (cotizacion_id, producto_id, proveedor_elegido_id, cantidad, precio_costo_unitario, precio_venta_unitario, subtotal_linea) VALUES
+                    (1, 1, 1, 10, 10.00, 15.00, 150.00),
+                    (2, 2, 2, 2, 50.00, 65.00, 130.00);
+                    """)
+                
+                # Migración automática: Agregar columna direccion si no existe
+                try:
+                    cursor.execute("ALTER TABLE proveedores ADD COLUMN direccion TEXT")
+                except Exception:
+                    pass
                 
             conn.close()
         except Exception as e:
@@ -286,6 +318,12 @@ class DatabaseManager:
         INSERT INTO cotizaciones (numero_cotizacion, cliente_id, fecha_emision, fecha_vencimiento, es_credito_72dias, estado, subtotal, iva, total, observaciones) VALUES
         ('COT-2026-001', 1, DATE('now'), DATE('now', '+72 days'), 1, 'Facturada', 1500.00, 225.00, 1725.00, 'Contrato Gobierno Nro 44 - Crédito 72 días'),
         ('COT-2026-002', 3, DATE('now'), DATE('now', '+15 days'), 0, 'Aprobada', 120.00, 18.00, 138.00, 'Venta al contado B2C');
+        """)
+
+        cursor.execute("""
+        INSERT INTO cotizacion_detalles (cotizacion_id, producto_id, proveedor_elegido_id, cantidad, precio_costo_unitario, precio_venta_unitario, subtotal_linea) VALUES
+        (1, 1, 1, 10, 10.00, 15.00, 150.00),
+        (2, 2, 2, 2, 50.00, 65.00, 130.00);
         """)
 
     def execute_query(self, query, params=()):

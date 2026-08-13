@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from views.components import PrimaryButton, AccentButton
 from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_DANGER
-from models.models import ExpenseModel
+from models.models import ExpenseModel, AuditLogModel
 from database.connection import db
 
 class ExpensesView(ctk.CTkFrame):
@@ -89,6 +89,17 @@ class ExpensesView(ctk.CTkFrame):
 
         e_reg = ctk.CTkOptionMenu(dialog, values=["Socio 1 - Administrador", "Socio 2 - Compras", "Socio 3 - Contable"], width=350)
         e_reg.pack(pady=6)
+        
+        # Preseleccionar el usuario logueado actualmente
+        root = self.winfo_toplevel()
+        if hasattr(root, 'current_user') and root.current_user:
+            curr_name = root.current_user.get('nombre_completo', '')
+            if "Socio 1" in curr_name or "Administrador" in curr_name:
+                e_reg.set("Socio 1 - Administrador")
+            elif "Socio 2" in curr_name or "Compras" in curr_name:
+                e_reg.set("Socio 2 - Compras")
+            elif "Socio 3" in curr_name or "Contable" in curr_name or "Contador" in curr_name:
+                e_reg.set("Socio 3 - Contable")
 
         e_comp = ctk.CTkEntry(dialog, placeholder_text="Número de Comprobante / Factura (Opcional)", width=350)
         e_comp.pack(pady=6)
@@ -103,8 +114,21 @@ class ExpensesView(ctk.CTkFrame):
 
             if con and mon > 0:
                 ExpenseModel.create(cat, con, mon, e_met.get(), e_reg.get(), e_comp.get().strip())
+                
+                # RF1.3: Registro automático de auditoría para compras
+                root_win = self.winfo_toplevel()
+                user_name = root_win.current_user.get('nombre_completo', e_reg.get()) if hasattr(root_win, 'current_user') and root_win.current_user else e_reg.get()
+                AuditLogModel.log(
+                    user_name,
+                    "Compra",
+                    f"Compra/Gasto registrado: {con} | Categoría: {cat} | Monto: ${mon:,.2f} USD"
+                )
+                
                 dialog.destroy()
                 self.load_expenses()
 
         btn_save = PrimaryButton(dialog, "Guardar Gasto", command=save, width=350)
         btn_save.pack(pady=20)
+
+    def refresh_data(self):
+        self.load_expenses()

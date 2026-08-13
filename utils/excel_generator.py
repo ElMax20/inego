@@ -69,9 +69,16 @@ def export_sales_to_excel(date_from=None, date_to=None, output_path=None):
         JOIN clientes cl ON c.cliente_id = cl.id
     """
     params = []
-    if date_from and date_to:
-        query += " WHERE c.fecha_emision BETWEEN %s AND %s"
-        params.extend([date_from, date_to])
+    where_clauses = []
+    if date_from:
+        where_clauses.append("c.fecha_emision >= %s")
+        params.append(date_from)
+    if date_to:
+        where_clauses.append("c.fecha_emision <= %s")
+        params.append(date_to)
+        
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
     query += " ORDER BY c.fecha_emision DESC"
 
     records = db.fetch_all(query, tuple(params))
@@ -246,6 +253,99 @@ def export_gantt_chart_to_excel(output_path=None):
     ws.column_dimensions["D"].width = 14
     ws.column_dimensions["E"].width = 16
     ws.column_dimensions["F"].width = 12
+
+    wb.save(output_path)
+    return output_path
+
+
+def export_expenses_to_excel(output_path=None):
+    if not output_path:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = os.path.join(DATA_DIR, f"Reporte_Gastos_CajaChica_{timestamp}.xlsx")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Gastos Caja Chica"
+    ws.views.sheetView[0].showGridLines = True
+
+    navy_fill = PatternFill(start_color="0A192F", end_color="0A192F", fill_type="solid")
+    blue_header_fill = PatternFill(start_color="1E3E7A", end_color="1E3E7A", fill_type="solid")
+    zebra_fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+    
+    title_font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    bold_font = Font(name="Calibri", size=11, bold=True)
+    regular_font = Font(name="Calibri", size=11)
+    
+    thin_border = Border(
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='thin', color='CBD5E1')
+    )
+
+    ws.merge_cells("A1:F1")
+    title_cell = ws["A1"]
+    title_cell.value = f"REPORTE DE EGRESOS Y CAJA CHICA - {COMPANY_NAME.upper()}"
+    title_cell.font = title_font
+    title_cell.fill = navy_fill
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 40
+
+    headers = [
+        "Fecha", "Categoría / Rubro", "Concepto / Descripción", 
+        "Registrado Por", "Método de Pago", "Monto USD ($)"
+    ]
+    ws.row_dimensions[3].height = 28
+
+    for col_num, header_title in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=col_num)
+        cell.value = header_title
+        cell.font = header_font
+        cell.fill = blue_header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin_border
+
+    query = "SELECT fecha, categoria, concepto, registrado_por, metodo_pago, monto FROM gastos ORDER BY fecha DESC"
+    records = db.fetch_all(query)
+    current_row = 4
+    total_acumulado = 0.0
+
+    for idx, r in enumerate(records):
+        ws.cell(row=current_row, column=1, value=str(r["fecha"])).alignment = Alignment(horizontal="center")
+        ws.cell(row=current_row, column=2, value=r["categoria"])
+        ws.cell(row=current_row, column=3, value=r["concepto"])
+        ws.cell(row=current_row, column=4, value=r["registrado_por"])
+        ws.cell(row=current_row, column=5, value=r["metodo_pago"]).alignment = Alignment(horizontal="center")
+        
+        m_c = ws.cell(row=current_row, column=6, value=float(r["monto"]))
+        m_c.number_format = '$#,##0.00'
+        total_acumulado += float(r["monto"])
+
+        fill_to_use = zebra_fill if idx % 2 == 1 else None
+        for col_i in range(1, 7):
+            c = ws.cell(row=current_row, column=col_i)
+            c.font = regular_font
+            c.border = thin_border
+            if fill_to_use:
+                c.fill = fill_to_use
+
+        current_row += 1
+
+    ws.row_dimensions[current_row].height = 25
+    ws.cell(row=current_row, column=5, value="TOTAL GENERAL:").font = bold_font
+    ws.cell(row=current_row, column=5).alignment = Alignment(horizontal="right", vertical="center")
+    
+    tot_final = ws.cell(row=current_row, column=6, value=total_acumulado)
+    tot_final.font = bold_font
+    tot_final.number_format = '$#,##0.00'
+    tot_final.border = thin_border
+    tot_final.fill = PatternFill(start_color="E0F2FE", end_color="E0F2FE", fill_type="solid")
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
 
     wb.save(output_path)
     return output_path

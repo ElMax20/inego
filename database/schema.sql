@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS proveedores (
     contacto_nombre VARCHAR(100),
     telefono VARCHAR(50),
     email VARCHAR(100),
+    direccion VARCHAR(200),
     ubicacion VARCHAR(100) DEFAULT 'Guayaquil',
     categoria_id INT,
     tipo_proveedor ENUM('Guayaquil (90%)', 'Otras Provincias', 'Amazon', 'Tiendamia') DEFAULT 'Guayaquil (90%)',
@@ -150,6 +151,21 @@ CREATE TABLE IF NOT EXISTS roles_pago (
     fecha_emision DATE DEFAULT (CURRENT_DATE),
     estado ENUM('Pendiente', 'Pagado') DEFAULT 'Pagado',
     observaciones TEXT
+);
+
+-- 10. Tabla de Ordenes de Venta (RF3.6)
+CREATE TABLE IF NOT EXISTS ordenes_venta (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    numero_orden VARCHAR(50) UNIQUE NOT NULL,
+    cotizacion_id INT NOT NULL,
+    cliente_id INT NOT NULL,
+    fecha_orden DATETIME DEFAULT CURRENT_TIMESTAMP,
+    subtotal DECIMAL(10, 2) NOT NULL,
+    iva DECIMAL(10, 2) NOT NULL,
+    total DECIMAL(10, 2) NOT NULL,
+    estado VARCHAR(50) DEFAULT 'Generada',
+    FOREIGN KEY (cotizacion_id) REFERENCES cotizaciones(id) ON DELETE CASCADE,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
 );
 
 -- SEED DATA INICIAL DE PRUEBA
