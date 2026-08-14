@@ -6,7 +6,7 @@ import customtkinter as ctk
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
-    COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_PRIMARY, COLOR_PRIMARY_HOVER,
+    COLOR_BG_MAIN, COLOR_BG_SIDEBAR, COLOR_BG_CARD, COLOR_PRIMARY, COLOR_PRIMARY_HOVER,
     COLOR_ACCENT, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_BORDER,
     COMPANY_NAME, COMPANY_SLOGAN
 )
@@ -24,13 +24,13 @@ from views.users_view import UsersView
 from models.models import AuditLogModel
 
 class InegoApp(ctk.CTk):
-    """ Aplicación Principal ERP / CRM Inego Industrias Desktop (Ventana Única) """
+    """ Aplicación Principal ERP / CRM Inego Industrias Desktop (Estilo Dark SaaS) """
     def __init__(self):
         super().__init__()
         self.current_user = None
 
         # Configuración de Ventana Principal
-        self.title(f"{COMPANY_NAME} - Sistema Integrado de Gestión")
+        self.title(f"{COMPANY_NAME} - Sistema Integrado de Gestión Corporativa")
         self.geometry("1280x760")
         self.minsize(1100, 680)
 
@@ -83,9 +83,9 @@ class InegoApp(ctk.CTk):
             self.body_container = ctk.CTkFrame(self, fg_color="transparent")
         self.body_container.pack(fill="both", expand=True)
 
-        # 2. Sidebar Lateral Navegación
+        # 2. Sidebar Lateral Navegación (Dark SaaS Slate)
         if not self.sidebar:
-            self.sidebar = ctk.CTkFrame(self.body_container, fg_color=COLOR_BG_CARD, width=230, corner_radius=0)
+            self.sidebar = ctk.CTkFrame(self.body_container, fg_color=COLOR_BG_SIDEBAR, width=240, corner_radius=0)
             self.sidebar.pack(side="left", fill="y")
             self.sidebar.pack_propagate(False)
             self._build_sidebar()
@@ -119,10 +119,10 @@ class InegoApp(ctk.CTk):
             w.destroy()
 
         ctk.CTkLabel(
-            self.sidebar, text="MENÚ PRINCIPAL",
+            self.sidebar, text="MENÚ OPERATIVO",
             font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
             text_color="#64748B"
-        ).pack(anchor="w", padx=20, pady=(15, 8))
+        ).pack(anchor="w", padx=20, pady=(18, 10))
 
         nav_items = [
             ("dashboard", "📊 Panel Principal", "PANEL DE CONTROL Y MÉTRICAS"),
@@ -139,13 +139,13 @@ class InegoApp(ctk.CTk):
         for route, text, title_header in nav_items:
             btn = ctk.CTkButton(
                 self.sidebar, text=text,
-                anchor="w", height=38, corner_radius=8,
+                anchor="w", height=40, corner_radius=8,
                 fg_color="transparent", hover_color="#1E293B",
                 text_color=COLOR_TEXT_SECONDARY,
-                font=ctk.CTkFont(family="Segoe UI", size=12),
+                font=ctk.CTkFont(family="Segoe UI", size=12, weight="bold"),
                 command=lambda r=route, t=title_header: self._on_sidebar_click(r, t)
             )
-            btn.pack(fill="x", padx=12, pady=2)
+            btn.pack(fill="x", padx=14, pady=2)
             self.sidebar_buttons[route] = btn
 
         # Footer del Sidebar
@@ -155,12 +155,12 @@ class InegoApp(ctk.CTk):
         btn_logout = ctk.CTkButton(
             footer_box, text="🔒 Cerrar Sesión", command=self._logout,
             fg_color="#1E293B", hover_color="#334155", text_color="#F8FAFC",
-            height=32, corner_radius=6, font=ctk.CTkFont(size=11, weight="bold")
+            height=34, corner_radius=6, font=ctk.CTkFont(size=11, weight="bold")
         )
         btn_logout.pack(fill="x", pady=(0, 10))
 
         ctk.CTkLabel(
-            footer_box, text="Inego Industrias v1.0",
+            footer_box, text="Inego Industrias v2.0 SaaS UI",
             font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_ACCENT
         ).pack(anchor="w")
 

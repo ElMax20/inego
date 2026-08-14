@@ -6,23 +6,34 @@ COMPANY_SLOGAN = "Ferretería, Equipos, Suministros de Oficina y Producción"
 COMPANY_LOCATION = "Guayaquil, Ecuador"
 COMPANY_LOGO_TITLE = "Árbol de la Vida"
 
-# Paleta de Colores Corporativa (Gama de Azules)
-COLOR_BG_MAIN = "#0A192F"       # Azul Marino Profundo (Fondo Principal)
-COLOR_BG_CARD = "#112240"       # Azul Oscuro Tarjetas / Tarjetas elevadas
-COLOR_PRIMARY = "#1E3E7A"       # Azul Real Corporativo
-COLOR_PRIMARY_HOVER = "#2563EB" # Azul Brillante Hover
-COLOR_ACCENT = "#0284C7"        # Azul Cían/Zafiro
-COLOR_ACCENT_HOVER = "#0369A1"  # Azul Cían Oscuro Hover
-COLOR_LIGHT_BLUE = "#E0F2FE"    # Azul Hielo Textos/Badges
-COLOR_BORDER = "#1E293B"        # Borde Azul Grisáceo
+# Paleta de Colores "Obsidian & Midnight Glass" (SaaS UI Moderno)
+COLOR_BG_MAIN = "#0B0F19"          # Obsidian Dark Space (Fondo Principal)
+COLOR_BG_SIDEBAR = "#0F172A"       # Midnight Slate (Barra Lateral)
+COLOR_BG_CARD = "#1E293B"          # SaaS Glass Elevated Card
+COLOR_BG_CARD_HOVER = "#334155"    # Card Hover Highlight
+COLOR_BORDER = "#1E293B"           # Crisp Border Subtlety
+COLOR_BORDER_LIGHT = "#334155"     # Borde sutil acentuado
 
-COLOR_TEXT_PRIMARY = "#F8FAFC"  # Blanco puro / Suave
-COLOR_TEXT_SECONDARY = "#94A3B8"# Gris azulado claro
-COLOR_TEXT_MUTED = "#64748B"    # Gris azulado tenue
+# Acentos y Neón
+COLOR_PRIMARY = "#0284C7"          # Electric Sky Blue
+COLOR_PRIMARY_HOVER = "#0369A1"    # Electric Sky Dark
+COLOR_ACCENT = "#38BDF8"           # Cyan Neon Glow
+COLOR_ACCENT_HOVER = "#0EA5E9"     # Cyan Hover
+COLOR_LIGHT_BLUE = "#E0F2FE"       # Ice Blue Pill Text
+COLOR_PURPLE = "#8B5CF6"           # Indigo SaaS Accent
 
-COLOR_SUCCESS = "#10B981"       # Verde Esmeralda (Cobrado/En Stock)
-COLOR_WARNING = "#F59E0B"       # Ámbar Alerta (72 días crédito pronto / Re-cotizar)
-COLOR_DANGER = "#EF4444"        # Rojo Error (Vencido / Agotado)
+# Jerarquía de Textos High-Contrast
+COLOR_TEXT_PRIMARY = "#F8FAFC"     # Blanco Puro / Alta Legibilidad
+COLOR_TEXT_SECONDARY = "#CBD5E1"   # Gris Claro Suave
+COLOR_TEXT_MUTED = "#64748B"       # Muted Label Text
+
+# Indicadores de Estado y Alertas
+COLOR_SUCCESS = "#10B981"          # Emerald Green Status (Activo/En Stock)
+COLOR_SUCCESS_BG = "#064E3B"       # Emerald Pill Background
+COLOR_WARNING = "#F59E0B"          # Amber Alert (Crédito 72 días / Re-stock)
+COLOR_WARNING_BG = "#451A03"       # Amber Pill Background
+COLOR_DANGER = "#EF4444"           # Crimson Danger (Agotado / Bloqueo)
+COLOR_DANGER_BG = "#451212"        # Crimson Pill Background
 
 # Rutas del Sistema
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

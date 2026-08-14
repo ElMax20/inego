@@ -1,54 +1,64 @@
 import customtkinter as ctk
-from views.components import MetricCard, PrimaryButton, AccentButton
-from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_WARNING, COLOR_SUCCESS, COLOR_DANGER
+from views.components import MetricCard, PrimaryButton, AccentButton, StatusChip, CardFrame
+from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_WARNING, COLOR_SUCCESS, COLOR_DANGER, COLOR_PURPLE
 from database.connection import db
 
 class DashboardView(ctk.CTkFrame):
+    """ Panel Principal y Dashboard de Métricas Corporativas (Rediseño SaaS UI) """
     def __init__(self, master, navigate_callback=None, **kwargs):
         super().__init__(master, fg_color=COLOR_BG_MAIN, corner_radius=0, **kwargs)
         self.navigate_callback = navigate_callback
 
         self.scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
-        self.scroll.pack(fill="both", expand=True, padx=20, pady=20)
+        self.scroll.pack(fill="both", expand=True, padx=22, pady=20)
 
+        # 1. Cuadrícula de Métricas KPI SaaS
         self.kpi_frame = ctk.CTkFrame(self.scroll, fg_color="transparent")
-        self.kpi_frame.pack(fill="x", pady=(0, 20))
+        self.kpi_frame.pack(fill="x", pady=(0, 22))
 
-        self.kpi_ventas = MetricCard(self.kpi_frame, "Ventas Totales Mes", "$0.00", "💵", "Acumulado Facturado", COLOR_SUCCESS)
-        self.kpi_ventas.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.kpi_ventas = MetricCard(self.kpi_frame, "Ventas Totales Mes", "$0.00", "💵", "Acumulado Facturado", "▲ +15.4%", COLOR_SUCCESS)
+        self.kpi_ventas.pack(side="left", fill="x", expand=True, padx=(0, 8))
 
-        self.kpi_gastos = MetricCard(self.kpi_frame, "Gastos y Operativa", "$0.00", "🧾", "Agua, Logística y Gestión", COLOR_ACCENT)
-        self.kpi_gastos.pack(side="left", fill="x", expand=True, padx=5)
+        self.kpi_gastos = MetricCard(self.kpi_frame, "Gastos y Operativa", "$0.00", "🧾", "Agua, Logística y Gestión", "▼ -3.2%", COLOR_ACCENT)
+        self.kpi_gastos.pack(side="left", fill="x", expand=True, padx=4)
 
-        self.kpi_credito = MetricCard(self.kpi_frame, "Créditos B2B Vivos (72d)", "$0.00", "⏳", "Por Cobrar a Gobierno/B2B", COLOR_WARNING)
-        self.kpi_credito.pack(side="left", fill="x", expand=True, padx=5)
+        self.kpi_credito = MetricCard(self.kpi_frame, "Créditos B2B Vivos", "$0.00", "⏳", "Por Cobrar Gobierno 72d", "⚡ En Monitoreo", COLOR_WARNING)
+        self.kpi_credito.pack(side="left", fill="x", expand=True, padx=4)
 
-        self.kpi_cotiz = MetricCard(self.kpi_frame, "Cotizaciones Activas", "0", "📋", "Historial de Clientes", COLOR_ACCENT)
-        self.kpi_cotiz.pack(side="left", fill="x", expand=True, padx=(10, 0))
+        self.kpi_cotiz = MetricCard(self.kpi_frame, "Cotizaciones Activas", "0", "📋", "Historial de Clientes", "▲ +8.0%", COLOR_PURPLE)
+        self.kpi_cotiz.pack(side="left", fill="x", expand=True, padx=(8, 0))
 
+        # 2. Fila Media: Monitoreo de Stock Fijo y Accesos Rápidos
         middle_frame = ctk.CTkFrame(self.scroll, fg_color="transparent")
-        middle_frame.pack(fill="x", pady=(0, 20))
+        middle_frame.pack(fill="x", pady=(0, 22))
 
-        stock_card = ctk.CTkFrame(middle_frame, fg_color=COLOR_BG_CARD, corner_radius=12)
+        stock_card = CardFrame(middle_frame)
         stock_card.pack(side="left", fill="both", expand=True, padx=(0, 10))
 
+        st_header = ctk.CTkFrame(stock_card, fg_color="transparent")
+        st_header.pack(fill="x", padx=18, pady=(16, 6))
+
         st_title = ctk.CTkLabel(
-            stock_card, text="📦 Control de Stock Permanente (Items Fijos)",
+            st_header, text="📦 Control de Stock Permanente (Items Fijos)",
             font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
         )
-        st_title.pack(anchor="w", padx=16, pady=(14, 8))
+        st_title.pack(side="left")
+
+        chip_mon = StatusChip(st_header, "MONITOREO EN VIVO", "accent")
+        chip_mon.pack(side="right")
 
         st_desc = ctk.CTkLabel(
             stock_card, text="Monitoreo de productos de rotación continua (Cuchillas de doble filo, Licencias Office):",
             font=ctk.CTkFont(family="Segoe UI", size=11), text_color=COLOR_TEXT_MUTED
         )
-        st_desc.pack(anchor="w", padx=16, pady=(0, 10))
+        st_desc.pack(anchor="w", padx=18, pady=(0, 12))
 
         self.stock_list_frame = ctk.CTkFrame(stock_card, fg_color="transparent")
-        self.stock_list_frame.pack(fill="both", expand=True, padx=16, pady=(0, 14))
+        self.stock_list_frame.pack(fill="both", expand=True, padx=18, pady=(0, 16))
 
-        actions_card = ctk.CTkFrame(middle_frame, fg_color=COLOR_BG_CARD, corner_radius=12)
+        # Tarjeta de Accesos Rápidos
+        actions_card = CardFrame(middle_frame)
         actions_card.pack(side="right", fill="both", expand=True, padx=(10, 0))
 
         ac_title = ctk.CTkLabel(
@@ -56,19 +66,19 @@ class DashboardView(ctk.CTkFrame):
             font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
             text_color=COLOR_TEXT_PRIMARY
         )
-        ac_title.pack(anchor="w", padx=16, pady=(14, 12))
+        ac_title.pack(anchor="w", padx=18, pady=(16, 12))
 
-        btn1 = PrimaryButton(actions_card, "Nueva Cotización / Comparar", icon="➕", command=lambda: self._nav("quotes"))
-        btn1.pack(fill="x", padx=16, pady=4)
+        btn1 = PrimaryButton(actions_card, "Nueva Cotización / Comparar", icon="📋", command=lambda: self._nav("quotes"))
+        btn1.pack(fill="x", padx=18, pady=5)
 
         btn2 = AccentButton(actions_card, "Registrar Gasto u Operativa", icon="💸", command=lambda: self._nav("expenses"))
-        btn2.pack(fill="x", padx=16, pady=4)
+        btn2.pack(fill="x", padx=18, pady=5)
 
         btn3 = PrimaryButton(actions_card, "Descargar Diagrama de Gantt Excel", icon="📊", command=lambda: self._nav("reports"))
-        btn3.pack(fill="x", padx=16, pady=4)
+        btn3.pack(fill="x", padx=18, pady=5)
 
         btn4 = AccentButton(actions_card, "Calcular Nómina de 3 Socios ($50 + 5%)", icon="👔", command=lambda: self._nav("payroll"))
-        btn4.pack(fill="x", padx=16, pady=(4, 14))
+        btn4.pack(fill="x", padx=18, pady=(5, 16))
 
         self.refresh_data()
 
@@ -99,17 +109,19 @@ class DashboardView(ctk.CTkFrame):
         perm_prods = db.fetch_all("SELECT * FROM productos WHERE tipo_stock = 'Permanente'")
         for p in perm_prods:
             is_alert = p['stock_actual'] <= p['stock_minimo']
-            row_color = "#311c1c" if is_alert else "#1E293B"
+            row_color = "#381414" if is_alert else "#0F172A"
             text_color = COLOR_DANGER if is_alert else COLOR_TEXT_PRIMARY
-            val_color = COLOR_DANGER if is_alert else COLOR_ACCENT
 
-            row = ctk.CTkFrame(self.stock_list_frame, fg_color=row_color, corner_radius=6)
-            row.pack(fill="x", pady=3)
+            row = ctk.CTkFrame(self.stock_list_frame, fg_color=row_color, corner_radius=8, border_width=1, border_color="#334155")
+            row.pack(fill="x", pady=4)
 
             lbl_text = f"🚨 {p['nombre']} [{p['codigo']}]" if is_alert else f"• {p['nombre']} [{p['codigo']}]"
             lbl = ctk.CTkLabel(row, text=lbl_text, font=ctk.CTkFont(size=12, weight="bold"), text_color=text_color)
-            lbl.pack(side="left", padx=10, pady=6)
+            lbl.pack(side="left", padx=12, pady=8)
 
-            val_text = f"ALERTA: {p['stock_actual']} unids (Mín: {p['stock_minimo']})" if is_alert else f"Stock Actual: {p['stock_actual']} unidades"
-            st_val = ctk.CTkLabel(row, text=val_text, font=ctk.CTkFont(size=12, weight="bold" if is_alert else "normal"), text_color=val_color)
-            st_val.pack(side="right", padx=10, pady=6)
+            if is_alert:
+                chip_alert = StatusChip(row, f"RE-STOCK REQUERIDO: {p['stock_actual']} unids", "danger")
+                chip_alert.pack(side="right", padx=10)
+            else:
+                chip_ok = StatusChip(row, f"Stock: {p['stock_actual']} unids", "success")
+                chip_ok.pack(side="right", padx=10)
