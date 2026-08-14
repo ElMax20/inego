@@ -12,19 +12,10 @@ from config import (
 )
 from views.components import HeaderFrame
 from views.login_view import LoginFrame
-from views.dashboard_view import DashboardView
-from views.inventory_view import InventoryView
-from views.suppliers_view import SuppliersView
-from views.clients_view import ClientsView
-from views.quotes_view import QuotesView
-from views.expenses_view import ExpensesView
-from views.payroll_view import PayrollView
-from views.reports_view import ReportsView
-from views.users_view import UsersView
 from models.models import AuditLogModel
 
 class InegoApp(ctk.CTk):
-    """ Aplicación Principal ERP / CRM Inego Industrias Desktop (Estilo Dark SaaS) """
+    """ Aplicación Principal ERP / CRM Inego Industrias Desktop (Arquitectura Carga Diferida / Lazy Loading) """
     def __init__(self):
         super().__init__()
         self.current_user = None
@@ -46,6 +37,7 @@ class InegoApp(ctk.CTk):
         self.sidebar = None
         self.main_content = None
 
+        # Caché de vistas instanciadas bajo demanda (Lazy Loading)
         self.views = {}
         self.sidebar_buttons = {}
 
@@ -96,23 +88,11 @@ class InegoApp(ctk.CTk):
         if not self.main_content:
             self.main_content = ctk.CTkFrame(self.body_container, fg_color=COLOR_BG_MAIN, corner_radius=0)
             self.main_content.pack(side="right", fill="both", expand=True)
-            self._init_views()
         else:
             self.main_content.pack(side="right", fill="both", expand=True)
 
-        # Ir al panel principal
+        # Cargar únicamente el Dashboard inicialmente (Lazy Loading)
         self.navigate_to("dashboard")
-
-    def _init_views(self):
-        self.views["dashboard"] = DashboardView(self.main_content, navigate_callback=self.navigate_to)
-        self.views["inventory"] = InventoryView(self.main_content)
-        self.views["suppliers"] = SuppliersView(self.main_content)
-        self.views["clients"] = ClientsView(self.main_content)
-        self.views["quotes"] = QuotesView(self.main_content)
-        self.views["expenses"] = ExpensesView(self.main_content)
-        self.views["payroll"] = PayrollView(self.main_content)
-        self.views["reports"] = ReportsView(self.main_content)
-        self.views["users"] = UsersView(self.main_content, current_user=self.current_user)
 
     def _build_sidebar(self):
         for w in self.sidebar.winfo_children():
@@ -160,13 +140,43 @@ class InegoApp(ctk.CTk):
         btn_logout.pack(fill="x", pady=(0, 10))
 
         ctk.CTkLabel(
-            footer_box, text="Inego Industrias v2.0 SaaS UI",
+            footer_box, text="Inego Industrias v2.0 (Lazy Load Optimized)",
             font=ctk.CTkFont(size=10, weight="bold"), text_color=COLOR_ACCENT
         ).pack(anchor="w")
 
     def _on_sidebar_click(self, route, title_header):
         self.header.update_module_title(title_header)
         self.navigate_to(route)
+
+    def _instantiate_view_lazily(self, route):
+        """ Instanciación por Demanda (Lazy Loading de Módulos) """
+        if route == "dashboard":
+            from views.dashboard_view import DashboardView
+            self.views["dashboard"] = DashboardView(self.main_content, navigate_callback=self.navigate_to)
+        elif route == "inventory":
+            from views.inventory_view import InventoryView
+            self.views["inventory"] = InventoryView(self.main_content)
+        elif route == "suppliers":
+            from views.suppliers_view import SuppliersView
+            self.views["suppliers"] = SuppliersView(self.main_content)
+        elif route == "clients":
+            from views.clients_view import ClientsView
+            self.views["clients"] = ClientsView(self.main_content)
+        elif route == "quotes":
+            from views.quotes_view import QuotesView
+            self.views["quotes"] = QuotesView(self.main_content)
+        elif route == "expenses":
+            from views.expenses_view import ExpensesView
+            self.views["expenses"] = ExpensesView(self.main_content)
+        elif route == "payroll":
+            from views.payroll_view import PayrollView
+            self.views["payroll"] = PayrollView(self.main_content)
+        elif route == "reports":
+            from views.reports_view import ReportsView
+            self.views["reports"] = ReportsView(self.main_content)
+        elif route == "users":
+            from views.users_view import UsersView
+            self.views["users"] = UsersView(self.main_content, current_user=self.current_user)
 
     def navigate_to(self, route):
         for r, btn in self.sidebar_buttons.items():
@@ -177,6 +187,10 @@ class InegoApp(ctk.CTk):
 
         for view in self.views.values():
             view.pack_forget()
+
+        # Instanciar el módulo bajo demanda si aún no existe en memoria (Lazy Loading)
+        if route not in self.views:
+            self._instantiate_view_lazily(route)
 
         if route in self.views:
             target_view = self.views[route]
@@ -192,6 +206,7 @@ class InegoApp(ctk.CTk):
                 "El usuario cerró sesión en el sistema"
             )
         self.current_user = None
+        self.views.clear()
         self.show_login_screen()
 
 

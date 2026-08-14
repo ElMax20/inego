@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from views.components import PrimaryButton, AccentButton
-from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_SUCCESS
+from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_SUCCESS, COLOR_DANGER, COLOR_WARNING
 from models.models import SupplierModel
 
 class SuppliersView(ctk.CTkFrame):
