@@ -125,13 +125,56 @@ class ClientsView(ctk.CTkFrame):
         e_dir.pack(pady=6)
         e_dir.insert(0, "Guayaquil")
 
+        lbl_err = ctk.CTkLabel(dialog, text="", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_DANGER)
+        lbl_err.pack(pady=4)
+
         def save():
             tipo = e_tipo.get()
             nom = e_nom.get().strip()
-            if nom:
-                ClientModel.create(tipo, nom, e_ruc.get().strip(), e_tel.get().strip(), e_email.get().strip(), e_dir.get().strip())
-                dialog.destroy()
-                self.load_clients()
+            ruc_ced = e_ruc.get().strip()
+            tel = e_tel.get().strip()
+            email = e_email.get().strip()
+            direccion = e_dir.get().strip()
+
+            from utils.validators import validate_email, validate_phone, validate_cedula, validate_ruc, validate_required_fields
+
+            # 1. Campos obligatorios
+            ok_req, msg_req = validate_required_fields({
+                "Razón Social / Nombre": nom,
+                "RUC / Cédula": ruc_ced,
+                "Teléfono": tel,
+                "Correo Electrónico": email,
+                "Dirección": direccion
+            })
+            if not ok_req:
+                lbl_err.configure(text=f"⚠️ {msg_req}")
+                return
+
+            # 2. RUC (13) o Cédula (10)
+            if len(ruc_ced) == 13:
+                ok_doc, msg_doc = validate_ruc(ruc_ced)
+            else:
+                ok_doc, msg_doc = validate_cedula(ruc_ced)
+
+            if not ok_doc:
+                lbl_err.configure(text=f"⚠️ {msg_doc}")
+                return
+
+            # 3. Teléfono (10 dígitos)
+            ok_tel, msg_tel = validate_phone(tel)
+            if not ok_tel:
+                lbl_err.configure(text=f"⚠️ {msg_tel}")
+                return
+
+            # 4. Email (@gmail.com / @hotmail)
+            ok_email, msg_email = validate_email(email)
+            if not ok_email:
+                lbl_err.configure(text=f"⚠️ {msg_email}")
+                return
+
+            ClientModel.create(tipo, nom, ruc_ced, tel, email, direccion)
+            dialog.destroy()
+            self.load_clients()
 
         btn_save = PrimaryButton(dialog, "Guardar Cliente", command=save, width=350)
-        btn_save.pack(pady=20)
+        btn_save.pack(pady=12)

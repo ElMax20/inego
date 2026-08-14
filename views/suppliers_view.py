@@ -145,31 +145,71 @@ class SuppliersView(ctk.CTkFrame):
         e_cat = ctk.CTkOptionMenu(dialog, values=cat_names, width=350)
         e_cat.pack(pady=6)
 
+        lbl_err = ctk.CTkLabel(dialog, text="", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_DANGER)
+        lbl_err.pack(pady=4)
+
         def save():
             emp = e_emp.get().strip()
-            if emp:
-                c_id = 1
-                for c in cats:
-                    if c['nombre'] == e_cat.get():
-                        c_id = c['id']
-                        break
-                
-                SupplierModel.create(
-                    emp, 
-                    e_ruc.get().strip(), 
-                    e_cont.get().strip(), 
-                    e_tel.get().strip(), 
-                    e_email.get().strip(), 
-                    e_dir.get().strip(),
-                    "Guayaquil" if e_tipo.get() == "Guayaquil (90%)" else "Exterior", 
-                    c_id, 
-                    e_tipo.get()
-                )
-                dialog.destroy()
-                self.load_suppliers()
+            ruc = e_ruc.get().strip()
+            cont = e_cont.get().strip()
+            tel = e_tel.get().strip()
+            email = e_email.get().strip()
+            direccion = e_dir.get().strip()
+
+            from utils.validators import validate_email, validate_phone, validate_cedula, validate_ruc, validate_required_fields
+
+            # 1. Campos obligatorios
+            ok_req, msg_req = validate_required_fields({
+                "Nombre Empresa": emp,
+                "RUC / Cédula": ruc,
+                "Nombre Contacto": cont,
+                "Teléfono": tel,
+                "Correo Electrónico": email,
+                "Dirección": direccion
+            })
+            if not ok_req:
+                lbl_err.configure(text=f"⚠️ {msg_req}")
+                return
+
+            # 2. RUC (13) o Cédula (10)
+            if len(ruc) == 13:
+                ok_doc, msg_doc = validate_ruc(ruc)
+            else:
+                ok_doc, msg_doc = validate_cedula(ruc)
+
+            if not ok_doc:
+                lbl_err.configure(text=f"⚠️ {msg_doc}")
+                return
+
+            # 3. Teléfono (10 dígitos)
+            ok_tel, msg_tel = validate_phone(tel)
+            if not ok_tel:
+                lbl_err.configure(text=f"⚠️ {msg_tel}")
+                return
+
+            # 4. Email (@gmail.com / @hotmail)
+            ok_email, msg_email = validate_email(email)
+            if not ok_email:
+                lbl_err.configure(text=f"⚠️ {msg_email}")
+                return
+
+            c_id = 1
+            for c in cats:
+                if c['nombre'] == e_cat.get():
+                    c_id = c['id']
+                    break
+            
+            SupplierModel.create(
+                emp, ruc, cont, tel, email, direccion,
+                "Guayaquil" if e_tipo.get() == "Guayaquil (90%)" else "Exterior", 
+                c_id, 
+                e_tipo.get()
+            )
+            dialog.destroy()
+            self.load_suppliers()
 
         btn_save = PrimaryButton(dialog, "Guardar Proveedor", command=save, width=350)
-        btn_save.pack(pady=20)
+        btn_save.pack(pady=12)
 
     def refresh_data(self):
         self.load_suppliers()

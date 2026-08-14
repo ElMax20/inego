@@ -5,9 +5,10 @@ from config import (
     COLOR_ACCENT, COLOR_SUCCESS, COLOR_DANGER, COLOR_WARNING
 )
 from models.models import UserModel, AuditLogModel
+from utils.validators import validate_email, validate_required_fields
 
 class UsersView(ctk.CTkFrame):
-    """ Vista de Gestión de Usuarios (RF1.4) y Registro de Auditoría (RF1.3) """
+    """ Vista de Gestión de Usuarios (RF1.4) y Registro de Auditoría (RF1.3) con permisos Admin y protección """
     @property
     def current_user(self):
         root = self.winfo_toplevel()
@@ -28,8 +29,14 @@ class UsersView(ctk.CTkFrame):
         )
         lbl_t.pack(side="left", padx=20)
 
-        btn_new = PrimaryButton(top_bar, "Registrar Nuevo Trabajador", icon="👤", command=self.open_new_user_dialog)
-        btn_new.pack(side="right", padx=20, pady=12)
+        # Botón Registrar Nuevo Trabajador (Solo visible/habilitado para Administradores)
+        user_rol = self.current_user.get('rol', '')
+        user_name = self.current_user.get('username', '')
+        self.is_admin = (user_rol == 'Administrador de Dinero' or user_name == 'admin')
+
+        if self.is_admin:
+            btn_new = PrimaryButton(top_bar, "Registrar Nuevo Trabajador", icon="👤", command=self.open_new_user_dialog)
+            btn_new.pack(side="right", padx=20, pady=12)
 
         # Tabview para dividir Gestión de Usuarios y Bitácora
         self.tabview = ctk.CTkTabview(self, fg_color=COLOR_BG_MAIN, segmented_button_fg_color=COLOR_BG_CARD, segmented_button_selected_color=COLOR_ACCENT)
@@ -86,15 +93,35 @@ class UsersView(ctk.CTkFrame):
             )
             st_badge.pack(side="left", padx=(0, 10))
 
-            btn_toggle_txt = "Desactivar" if is_active else "Activar"
-            btn_toggle = AccentButton(
-                right_box, btn_toggle_txt,
-                command=lambda uid=u['id'], st=u['activo'], uname=u['nombre_completo']: self.toggle_user_status(uid, st, uname),
-                width=90
-            )
-            btn_toggle.pack(side="left")
+            # 1. Protección de la cuenta main admin
+            if u['username'].lower() == 'admin':
+                prot_badge = ctk.CTkLabel(
+                    right_box, text="🛡️ Cuenta Admin Protegida",
+                    font=ctk.CTkFont(size=11, weight="bold"),
+                    text_color=COLOR_ACCENT, fg_color="#0F172A",
+                    corner_radius=6, padx=10, pady=4
+                )
+                prot_badge.pack(side="left")
+            # 2. Solo administradores pueden activar/desactivar otros usuarios
+            elif self.is_admin:
+                btn_toggle_txt = "Desactivar" if is_active else "Activar"
+                btn_toggle = AccentButton(
+                    right_box, btn_toggle_txt,
+                    command=lambda uid=u['id'], st=u['activo'], uname=u['nombre_completo']: self.toggle_user_status(uid, st, uname),
+                    width=90
+                )
+                btn_toggle.pack(side="left")
+            else:
+                restr_lbl = ctk.CTkLabel(
+                    right_box, text="🔒 Solo Administrador",
+                    font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_MUTED
+                )
+                restr_lbl.pack(side="left")
 
     def toggle_user_status(self, user_id, current_status, user_name):
+        if not self.is_admin:
+            return
+
         UserModel.toggle_active(user_id, current_status)
         new_st_str = "Desactivado" if current_status == 1 else "Activado"
         
@@ -108,13 +135,16 @@ class UsersView(ctk.CTkFrame):
         self.load_audit_logs()
 
     def open_new_user_dialog(self):
+        if not self.is_admin:
+            return
+
         dialog = ctk.CTkToplevel(self)
         dialog.title("Registrar Trabajador - Inego Industrias")
-        dialog.geometry("450x520")
+        dialog.geometry("450x540")
         dialog.configure(fg_color=COLOR_BG_CARD)
         dialog.grab_set()
 
-        ctk.CTkLabel(dialog, text="NUEVAS CREDENCIALES DE TRABAJADOR", font=ctk.CTkFont(size=14, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(pady=15)
+        ctk.CTkLabel(dialog, text="NUEVAS CREDENCIALES DE TRABAJADOR", font=ctk.CTkFont(size=14, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(pady=12)
 
         e_user = ctk.CTkEntry(dialog, placeholder_text="Nombre de Usuario (ej. jgomez)", width=350)
         e_user.pack(pady=6)
@@ -125,7 +155,7 @@ class UsersView(ctk.CTkFrame):
         e_nom = ctk.CTkEntry(dialog, placeholder_text="Nombre Completo del Trabajador/Socio", width=350)
         e_nom.pack(pady=6)
 
-        e_email = ctk.CTkEntry(dialog, placeholder_text="Correo Electrónico", width=350)
+        e_email = ctk.CTkEntry(dialog, placeholder_text="Correo (ej. usuario@gmail.com u @hotmail.com)", width=350)
         e_email.pack(pady=6)
 
         ctk.CTkLabel(dialog, text="Perfil / Rol Operativo:", text_color=COLOR_TEXT_MUTED).pack(anchor="w", padx=50, pady=(6, 0))
@@ -136,24 +166,44 @@ class UsersView(ctk.CTkFrame):
         )
         e_rol.pack(pady=6)
 
+        lbl_err = ctk.CTkLabel(dialog, text="", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_DANGER)
+        lbl_err.pack(pady=4)
+
         def save():
             user = e_user.get().strip()
             pwd = e_pass.get().strip()
             nom = e_nom.get().strip()
+            email = e_email.get().strip()
             rol = e_rol.get()
-            if user and pwd and nom:
-                UserModel.create_user(user, pwd, nom, e_email.get().strip(), rol)
-                AuditLogModel.log(
-                    self.current_user.get('nombre_completo', 'Administrador'),
-                    "Creación de Usuario",
-                    f"Creación de credenciales para '{nom}' con el rol '{rol}'"
-                )
-                dialog.destroy()
-                self.load_users()
-                self.load_audit_logs()
+
+            # Validaciones obligatorias
+            ok_req, msg_req = validate_required_fields({
+                "Usuario": user,
+                "Contraseña": pwd,
+                "Nombre Completo": nom,
+                "Correo Electrónico": email
+            })
+            if not ok_req:
+                lbl_err.configure(text=f"⚠️ {msg_req}")
+                return
+
+            ok_email, msg_email = validate_email(email)
+            if not ok_email:
+                lbl_err.configure(text=f"⚠️ {msg_email}")
+                return
+
+            UserModel.create_user(user, pwd, nom, email, rol)
+            AuditLogModel.log(
+                self.current_user.get('nombre_completo', 'Administrador'),
+                "Creación de Usuario",
+                f"Creación de credenciales para '{nom}' con el rol '{rol}'"
+            )
+            dialog.destroy()
+            self.load_users()
+            self.load_audit_logs()
 
         btn_save = PrimaryButton(dialog, "Guardar Credenciales", command=save, width=350)
-        btn_save.pack(pady=20)
+        btn_save.pack(pady=12)
 
     def load_audit_logs(self):
         for w in self.tab_audit.winfo_children():

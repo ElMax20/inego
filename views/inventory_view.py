@@ -3,8 +3,10 @@ from views.components import PrimaryButton, AccentButton
 from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
 from models.models import ProductModel, AuditLogModel, SupplierModel
 from database.connection import db
+from utils.validators import validate_required_fields
 
 class InventoryView(ctk.CTkFrame):
+    """ Vista de Catálogo de Productos e Inventario con Búsqueda Estilo Google por Enter """
     def __init__(self, master, **kwargs):
         super().__init__(master, fg_color=COLOR_BG_MAIN, corner_radius=0, **kwargs)
 
@@ -21,20 +23,24 @@ class InventoryView(ctk.CTkFrame):
         btn_new = PrimaryButton(top_bar, "Registrar Nuevo Producto", icon="➕", command=self.open_new_product_dialog)
         btn_new.pack(side="right", padx=20, pady=12)
 
-        # Barra de búsqueda (RF2.7)
+        # Barra de búsqueda (Estilo Google: Búsqueda por Enter o Botón Buscar, NO en caliente)
         search_frame = ctk.CTkFrame(self, fg_color="transparent")
         search_frame.pack(fill="x", padx=20, pady=(15, 0))
 
         self.search_entry = ctk.CTkEntry(
             search_frame, 
-            placeholder_text="🔍 Buscar por código, nombre o categoría...", 
-            width=400,
-            height=32
+            placeholder_text="🔍 Escriba una frase de búsqueda y presione ENTER (Estilo Google)...", 
+            width=460,
+            height=36
         )
         self.search_entry.pack(side="left", padx=(0, 10))
-        self.search_entry.bind("<KeyRelease>", lambda event: self.load_products())
+        # Ejecutar búsqueda ÚNICAMENTE al dar Enter (No en caliente)
+        self.search_entry.bind("<Return>", lambda event: self.load_products())
 
-        btn_clear = AccentButton(search_frame, "Limpiar", command=self.clear_search, width=80, height=32)
+        btn_search = PrimaryButton(search_frame, "Buscar", icon="🔍", command=self.load_products, width=90, height=36)
+        btn_search.pack(side="left", padx=(0, 6))
+
+        btn_clear = AccentButton(search_frame, "Limpiar", command=self.clear_search, width=80, height=36)
         btn_clear.pack(side="left")
 
         self.scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
@@ -43,8 +49,9 @@ class InventoryView(ctk.CTkFrame):
         self.load_products()
 
     def load_products(self):
-        # Obtener filtro de búsqueda (RF2.7)
-        search_query = self.search_entry.get().strip().lower() if hasattr(self, 'search_entry') else ""
+        # Obtener frase de búsqueda (Estilo Google por Enter)
+        raw_phrase = self.search_entry.get().strip().lower() if hasattr(self, 'search_entry') else ""
+        phrase_tokens = raw_phrase.split()
 
         for w in self.scroll.winfo_children():
             w.destroy()
@@ -52,105 +59,125 @@ class InventoryView(ctk.CTkFrame):
         products = ProductModel.get_all()
 
         if not products:
-            lbl = ctk.CTkLabel(self.scroll, text="No hay productos registrados.", text_color=COLOR_TEXT_MUTED)
+            lbl = ctk.CTkLabel(self.scroll, text="No hay productos registrados en el catálogo.", text_color=COLOR_TEXT_MUTED)
             lbl.pack(pady=30)
             return
 
+        # Identificar los productos más vendidos (Cuchillas de doble filo, Licencias de Office, etc.)
+        top_sellers_keywords = ["cuchilla", "licencia", "office", "tornillo", "papel"]
+
         displayed_count = 0
         for p in products:
-            # Filtrar por búsqueda (RF2.7)
-            if search_query:
-                match_cod = search_query in p['codigo'].lower()
-                match_nom = search_query in p['nombre'].lower()
-                match_cat = p['categoria'] and search_query in p['categoria'].lower()
-                if not (match_cod or match_nom or match_cat):
+            linked_sups = SupplierModel.get_product_suppliers(p['id'])
+
+            # Búsqueda por Frases (Google Style)
+            if phrase_tokens:
+                combined_text = f"{p['codigo']} {p['nombre']} {p['categoria']} {p['descripcion']} " + " ".join([ls['nombre_empresa'] for ls in linked_sups])
+                combined_text = combined_text.lower()
+                
+                # Todos los términos de la frase deben coincidir
+                if not all(token in combined_text for token in phrase_tokens):
                     continue
 
-            displayed_count += 1
-            card = ctk.CTkFrame(self.scroll, fg_color=COLOR_BG_CARD, corner_radius=10, border_width=1, border_color="#1E293B")
-            card.pack(fill="x", pady=6)
+            # Determinar si es producto MÁS VENDIDO
+            is_top_seller = any(k in p['nombre'].lower() or k in p['categoria'].lower() for k in top_sellers_keywords)
 
-            left_box = ctk.CTkFrame(card, fg_color="transparent")
-            left_box.pack(side="left", padx=16, pady=12)
+            # Si el producto tiene múltiples proveedores, diferenciarlos explícitamente por proveedor en el catálogo
+            supplier_variants = linked_sups if linked_sups else [{'nombre_empresa': 'Sin proveedor enlazado', 'precio_cotizado': p['precio_referencial'], 'fecha_ultima_cotizacion': 'N/A'}]
 
-            name_lbl = ctk.CTkLabel(
-                left_box, text=f"{p['nombre']} ({p['codigo']})",
-                font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
-                text_color=COLOR_TEXT_PRIMARY
-            )
-            name_lbl.pack(anchor="w")
+            for sup in supplier_variants:
+                displayed_count += 1
+                card = ctk.CTkFrame(self.scroll, fg_color=COLOR_BG_CARD, corner_radius=10, border_width=1, border_color="#1E293B")
+                card.pack(fill="x", pady=6)
 
-            desc_lbl = ctk.CTkLabel(
-                left_box, text=f"Categoría: {p['categoria']} | {p['descripcion'] or 'Sin descripción'}",
-                font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_MUTED
-            )
-            desc_lbl.pack(anchor="w", pady=(2, 0))
+                left_box = ctk.CTkFrame(card, fg_color="transparent")
+                left_box.pack(side="left", padx=16, pady=12)
 
-            # Obtener proveedores asociados (RF2.3)
-            linked_sups = SupplierModel.get_product_suppliers(p['id'])
-            if linked_sups:
-                sups_text = "🔗 Proveedores: " + " | ".join([
-                    f"{ls['nombre_empresa']} (${float(ls['precio_cotizado']):,.2f} - {ls['fecha_ultima_cotizacion']})"
-                    for ls in linked_sups
-                ])
-            else:
-                sups_text = "🔗 Sin proveedores asociados"
-            
-            sups_lbl = ctk.CTkLabel(
-                left_box, text=sups_text,
-                font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_ACCENT,
-                wraplength=600, justify="left"
-            )
-            sups_lbl.pack(anchor="w", pady=(4, 0))
+                header_box = ctk.CTkFrame(left_box, fg_color="transparent")
+                header_box.pack(anchor="w")
 
-            right_box = ctk.CTkFrame(card, fg_color="transparent")
-            right_box.pack(side="right", padx=16, pady=12)
+                # Nombre del producto con variante del proveedor enlazado
+                prov_tag = f" [Proveedor: {sup['nombre_empresa']}]" if len(supplier_variants) > 1 else ""
+                name_lbl = ctk.CTkLabel(
+                    header_box, text=f"{p['nombre']}{prov_tag} ({p['codigo']})",
+                    font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+                    text_color=COLOR_TEXT_PRIMARY
+                )
+                name_lbl.pack(side="left")
 
-            is_perm = p['tipo_stock'] == 'Permanente'
-            is_below_min = is_perm and p['stock_actual'] <= p['stock_minimo']
-            
-            if is_perm:
-                if is_below_min:
-                    badge_color = COLOR_DANGER
-                    badge_txt = f"🚨 RE-STOCK REQUERIDO: {p['stock_actual']} unids (Mín: {p['stock_minimo']})"
+                # Insignia MÁS VENDIDO
+                if is_top_seller:
+                    badge_top = ctk.CTkLabel(
+                        header_box, text="🔥 MÁS VENDIDO",
+                        font=ctk.CTkFont(size=10, weight="bold"),
+                        text_color="#F59E0B", fg_color="#451A03",
+                        corner_radius=4, padx=6, pady=2
+                    )
+                    badge_top.pack(side="left", padx=(10, 0))
+
+                desc_lbl = ctk.CTkLabel(
+                    left_box, text=f"Categoría: {p['categoria']} | {p['descripcion'] or 'Sin descripción'} | Mínimo de Stock Permitido: {p['stock_minimo']} unids",
+                    font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_MUTED
+                )
+                desc_lbl.pack(anchor="w", pady=(2, 0))
+
+                # Información del Proveedor y Costo
+                cost_val = float(sup.get('precio_cotizado', p['precio_referencial']) or 0.0)
+                sup_info = f"🔗 Proveedor Enlazado: {sup['nombre_empresa']} (Costo Cotizado: ${cost_val:,.2f} USD)"
+                sups_lbl = ctk.CTkLabel(
+                    left_box, text=sup_info,
+                    font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_ACCENT
+                )
+                sups_lbl.pack(anchor="w", pady=(3, 0))
+
+                right_box = ctk.CTkFrame(card, fg_color="transparent")
+                right_box.pack(side="right", padx=16, pady=12)
+
+                is_perm = p['tipo_stock'] == 'Permanente'
+                is_below_min = is_perm and p['stock_actual'] <= p['stock_minimo']
+                
+                if is_perm:
+                    if is_below_min:
+                        badge_color = COLOR_DANGER
+                        badge_txt = f"🚨 ALERTA DE STOCK MÍNIMO: {p['stock_actual']} unids (Mín: {p['stock_minimo']})"
+                    else:
+                        badge_color = COLOR_SUCCESS
+                        badge_txt = f"Stock Permanente: {p['stock_actual']} unids (Mín: {p['stock_minimo']})"
                 else:
-                    badge_color = COLOR_SUCCESS
-                    badge_txt = f"Stock Permanente: {p['stock_actual']} unids"
-            else:
-                badge_color = COLOR_WARNING
-                badge_txt = "Bajo Pedido (Drop-shipping)"
+                    badge_color = COLOR_WARNING
+                    badge_txt = "Bajo Pedido (Drop-shipping)"
 
-            st_badge = ctk.CTkLabel(
-                right_box, text=badge_txt,
-                font=ctk.CTkFont(size=12, weight="bold"),
-                text_color=badge_color, fg_color="#0F172A",
-                corner_radius=6, padx=10, pady=4
-            )
-            st_badge.pack(side="left", padx=(0, 10))
+                st_badge = ctk.CTkLabel(
+                    right_box, text=badge_txt,
+                    font=ctk.CTkFont(size=12, weight="bold"),
+                    text_color=badge_color, fg_color="#0F172A",
+                    corner_radius=6, padx=10, pady=4
+                )
+                st_badge.pack(side="left", padx=(0, 10))
 
-            if is_perm:
-                btn_add = AccentButton(right_box, "+ Stock", command=lambda pid=p['id']: self.add_stock_dialog(pid), width=80)
-                btn_add.pack(side="left", padx=2)
-                btn_dispatch = PrimaryButton(right_box, "🚚 Despacho", command=lambda pid=p['id']: self.dispatch_stock_dialog(pid), width=90)
-                btn_dispatch.pack(side="left", padx=2)
+                if is_perm:
+                    btn_add = AccentButton(right_box, "+ Stock", command=lambda pid=p['id']: self.add_stock_dialog(pid), width=80)
+                    btn_add.pack(side="left", padx=2)
+                    btn_dispatch = PrimaryButton(right_box, "🚚 Despacho", command=lambda pid=p['id']: self.dispatch_stock_dialog(pid), width=90)
+                    btn_dispatch.pack(side="left", padx=2)
 
-            btn_link = AccentButton(right_box, "🔗 Enlazar", command=lambda pid=p['id']: self.open_link_supplier_dialog(pid), width=85)
-            btn_link.pack(side="left", padx=2)
+                btn_link = AccentButton(right_box, "🔗 Enlazar", command=lambda pid=p['id']: self.open_link_supplier_dialog(pid), width=85)
+                btn_link.pack(side="left", padx=2)
 
-        if search_query and displayed_count == 0:
-            lbl = ctk.CTkLabel(self.scroll, text="No se encontraron productos que coincidan con la búsqueda.", text_color=COLOR_TEXT_MUTED)
+        if raw_phrase and displayed_count == 0:
+            lbl = ctk.CTkLabel(self.scroll, text=f"No se encontraron productos para la frase de búsqueda '{raw_phrase}'.", text_color=COLOR_TEXT_MUTED)
             lbl.pack(pady=30)
 
     def open_new_product_dialog(self):
         dialog = ctk.CTkToplevel(self)
         dialog.title("Nuevo Producto - Inego Industrias")
-        dialog.geometry("450x520")
+        dialog.geometry("450x560")
         dialog.configure(fg_color=COLOR_BG_CARD)
         dialog.grab_set()
 
         ctk.CTkLabel(dialog, text="REGISTRAR NUEVO PRODUCTO", font=ctk.CTkFont(size=14, weight="bold"), text_color=COLOR_TEXT_PRIMARY).pack(pady=15)
 
-        e_cod = ctk.CTkEntry(dialog, placeholder_text="Código (ej. FER-005)", width=350)
+        e_cod = ctk.CTkEntry(dialog, placeholder_text="Código del Producto (ej. FER-005)", width=350)
         e_cod.pack(pady=6)
 
         e_nom = ctk.CTkEntry(dialog, placeholder_text="Nombre del Producto", width=350)
@@ -159,20 +186,27 @@ class InventoryView(ctk.CTkFrame):
         e_cat = ctk.CTkOptionMenu(dialog, values=["Ferretería General", "Tecnología y Software", "Suministros de Oficina"], width=350)
         e_cat.pack(pady=6)
 
-        e_desc = ctk.CTkEntry(dialog, placeholder_text="Descripción corta", width=350)
+        e_desc = ctk.CTkEntry(dialog, placeholder_text="Descripción detallada del producto", width=350)
         e_desc.pack(pady=6)
 
-        ctk.CTkLabel(dialog, text="Tipo de Manejo de Stock:", text_color=COLOR_TEXT_MUTED).pack(anchor="w", padx=50, pady=(8, 0))
-        e_tipo = ctk.CTkOptionMenu(dialog, values=["Bajo Pedido", "Permanente"], width=350)
+        ctk.CTkLabel(dialog, text="Tipo de Manejo de Stock:", text_color=COLOR_TEXT_MUTED).pack(anchor="w", padx=50, pady=(6, 0))
+        e_tipo = ctk.CTkOptionMenu(dialog, values=["Permanente", "Bajo Pedido"], width=350)
         e_tipo.pack(pady=6)
 
-        e_stock = ctk.CTkEntry(dialog, placeholder_text="Stock Inicial (Si es Permanente)", width=350)
+        e_stock = ctk.CTkEntry(dialog, placeholder_text="Stock Inicial (unidades)", width=350)
         e_stock.pack(pady=6)
-        e_stock.insert(0, "0")
+        e_stock.insert(0, "10")
+
+        e_min = ctk.CTkEntry(dialog, placeholder_text="Mínimo de Stock Requerido (Umbral)", width=350)
+        e_min.pack(pady=6)
+        e_min.insert(0, "5")
 
         e_precio = ctk.CTkEntry(dialog, placeholder_text="Precio Referencial ($ USD)", width=350)
         e_precio.pack(pady=6)
         e_precio.insert(0, "0.00")
+
+        lbl_err = ctk.CTkLabel(dialog, text="", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_DANGER)
+        lbl_err.pack(pady=4)
 
         def save():
             cod = e_cod.get().strip()
@@ -180,19 +214,30 @@ class InventoryView(ctk.CTkFrame):
             cat = e_cat.get()
             desc = e_desc.get().strip()
             tipo = e_tipo.get()
-            try:
-                st = int(e_stock.get() or 0)
-                pr = float(e_precio.get() or 0.0)
-            except ValueError:
+
+            ok_req, msg_req = validate_required_fields({
+                "Código": cod,
+                "Nombre": nom,
+                "Descripción": desc
+            })
+            if not ok_req:
+                lbl_err.configure(text=f"⚠️ {msg_req}")
                 return
 
-            if cod and nom:
-                ProductModel.create(cod, nom, cat, desc, tipo, st, pr)
-                dialog.destroy()
-                self.load_products()
+            try:
+                st = int(e_stock.get() or 0)
+                st_min = int(e_min.get() or 5)
+                pr = float(e_precio.get() or 0.0)
+            except ValueError:
+                lbl_err.configure(text="⚠️ El stock y precio deben ser números válidos.")
+                return
+
+            ProductModel.create(cod, nom, cat, desc, tipo, st, pr)
+            dialog.destroy()
+            self.load_products()
 
         btn_save = PrimaryButton(dialog, "Guardar Producto", command=save, width=350)
-        btn_save.pack(pady=20)
+        btn_save.pack(pady=12)
 
     def add_stock_dialog(self, product_id):
         dialog = ctk.CTkInputDialog(text="Ingrese la cantidad de stock a ingresar:", title="Agregar Stock")
@@ -201,7 +246,6 @@ class InventoryView(ctk.CTkFrame):
             qty = int(val)
             ProductModel.update_stock(product_id, qty)
             
-            # Auditoría automática (RF1.3)
             prod = ProductModel.get_by_id(product_id)
             root_win = self.winfo_toplevel()
             user_name = root_win.current_user.get('nombre_completo', 'Socio 2 - Compras y Mercadería') if hasattr(root_win, 'current_user') and root_win.current_user else 'Socio 2 - Compras y Mercadería'
@@ -229,17 +273,14 @@ class InventoryView(ctk.CTkFrame):
                 
             ProductModel.update_stock(product_id, -qty)
             
-            # Auditoría automática (RF1.3)
             root_win = self.winfo_toplevel()
             user_name = root_win.current_user.get('nombre_completo', 'Socio 2 - Compras y Mercadería') if hasattr(root_win, 'current_user') and root_win.current_user else 'Socio 2 - Compras y Mercadería'
             
-            # Registrar despacho en la bitácora
             AuditLogModel.log(
                 user_name,
                 "Despacho",
                 f"Despacho manual de {qty} unidades del producto '{prod['nombre']}'"
             )
-            # Registrar entrega física en la bitácora
             AuditLogModel.log(
                 user_name,
                 "Entrega física",
@@ -262,7 +303,7 @@ class InventoryView(ctk.CTkFrame):
             
         dialog = ctk.CTkToplevel(self)
         dialog.title(f"Enlazar Proveedor - {prod['nombre']}")
-        dialog.geometry("450x420")
+        dialog.geometry("450x440")
         dialog.configure(fg_color=COLOR_BG_CARD)
         dialog.grab_set()
 
@@ -301,6 +342,9 @@ class InventoryView(ctk.CTkFrame):
         )
         e_disp.pack(pady=6)
 
+        lbl_err = ctk.CTkLabel(dialog, text="", font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_DANGER)
+        lbl_err.pack(pady=4)
+
         def save():
             sup_sel = sup_map.get(e_sup.get())
             if not sup_sel:
@@ -309,8 +353,7 @@ class InventoryView(ctk.CTkFrame):
                 cost = float(e_cost.get())
                 days = int(e_days.get())
             except ValueError:
-                from tkinter import messagebox
-                messagebox.showerror("Error de Formato", "El costo y los días de entrega deben ser valores numéricos válidos.")
+                lbl_err.configure(text="⚠️ El costo y los días deben ser valores numéricos válidos.")
                 return
                 
             SupplierModel.link_product(
@@ -321,7 +364,6 @@ class InventoryView(ctk.CTkFrame):
                 disponibilidad=e_disp.get()
             )
             
-            # Auditoría automática (RF1.3)
             root_win = self.winfo_toplevel()
             user_name = root_win.current_user.get('nombre_completo', 'Socio 2 - Compras y Mercadería') if hasattr(root_win, 'current_user') and root_win.current_user else 'Socio 2 - Compras y Mercadería'
             AuditLogModel.log(
@@ -334,4 +376,4 @@ class InventoryView(ctk.CTkFrame):
             self.load_products()
 
         btn_save = PrimaryButton(dialog, "Guardar Enlace", command=save, width=350)
-        btn_save.pack(pady=20)
+        btn_save.pack(pady=12)
