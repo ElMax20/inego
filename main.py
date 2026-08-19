@@ -179,6 +179,10 @@ class InegoApp(ctk.CTk):
             self.views["users"] = UsersView(self.main_content, current_user=self.current_user)
 
     def navigate_to(self, route):
+        if hasattr(self, 'current_route') and self.current_route == route:
+            return
+        self.current_route = route
+
         for r, btn in self.sidebar_buttons.items():
             if r == route:
                 btn.configure(fg_color=COLOR_PRIMARY, text_color=COLOR_TEXT_PRIMARY)
@@ -206,6 +210,7 @@ class InegoApp(ctk.CTk):
                 "El usuario cerró sesión en el sistema"
             )
         self.current_user = None
+        self.current_route = None
         self.views.clear()
         self.show_login_screen()
 

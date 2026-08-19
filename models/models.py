@@ -57,7 +57,7 @@ class AuditLogModel:
 
     @staticmethod
     def get_all():
-        return db.fetch_all("SELECT * FROM auditoria_log ORDER BY fecha_hora DESC, id DESC")
+        return db.fetch_all("SELECT * FROM auditoria_log ORDER BY fecha_hora DESC, id DESC LIMIT 150")
 
 class ProductModel:
     @staticmethod

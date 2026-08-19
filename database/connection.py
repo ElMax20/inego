@@ -14,33 +14,44 @@ class DatabaseManager:
     """
     def __init__(self):
         self.use_mysql = False
+        self.mysql_checked = False
         self.connection = None
+        self._check_mysql_availability()
         self._init_db()
 
-    def get_connection(self):
-        # Verificación ultra-rápida de puerto MySQL (0.15s)
+    def _check_mysql_availability(self):
         try:
             import socket
             sock = socket.create_connection((MYSQL_CONFIG["host"], MYSQL_CONFIG["port"]), timeout=0.15)
             sock.close()
-            
-            conn = pymysql.connect(
-                host=MYSQL_CONFIG["host"],
-                port=MYSQL_CONFIG["port"],
-                user=MYSQL_CONFIG["user"],
-                password=MYSQL_CONFIG["password"],
-                database=MYSQL_CONFIG["database"],
-                cursorclass=pymysql.cursors.DictCursor,
-                connect_timeout=1,
-                autocommit=True
-            )
             self.use_mysql = True
-            return conn
         except Exception:
             self.use_mysql = False
-            conn = sqlite3.connect(SQLITE_DB_PATH, timeout=5)
-            conn.row_factory = sqlite3.Row
-            return conn
+        self.mysql_checked = True
+
+    def get_connection(self):
+        if not self.mysql_checked:
+            self._check_mysql_availability()
+            
+        if self.use_mysql:
+            try:
+                conn = pymysql.connect(
+                    host=MYSQL_CONFIG["host"],
+                    port=MYSQL_CONFIG["port"],
+                    user=MYSQL_CONFIG["user"],
+                    password=MYSQL_CONFIG["password"],
+                    database=MYSQL_CONFIG["database"],
+                    cursorclass=pymysql.cursors.DictCursor,
+                    connect_timeout=1,
+                    autocommit=True
+                )
+                return conn
+            except Exception:
+                self.use_mysql = False
+                
+        conn = sqlite3.connect(SQLITE_DB_PATH, timeout=5)
+        conn.row_factory = sqlite3.Row
+        return conn
 
     def _init_db(self):
         try:

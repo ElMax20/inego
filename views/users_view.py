@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import threading
 from views.components import PrimaryButton, AccentButton
 from config import (
     COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED,
@@ -6,9 +7,10 @@ from config import (
 )
 from models.models import UserModel, AuditLogModel
 from utils.validators import validate_email, validate_required_fields
+from database.connection import db
 
 class UsersView(ctk.CTkFrame):
-    """ Vista de Gestión de Usuarios (RF1.4) y Registro de Auditoría (RF1.3) con permisos Admin y protección """
+    """ Vista de Gestión de Usuarios (RF1.4) y Registro de Auditoría (RF1.3) optimizada al extremo """
     @property
     def current_user(self):
         root = self.winfo_toplevel()
@@ -45,20 +47,49 @@ class UsersView(ctk.CTkFrame):
         self.tab_users = self.tabview.add("Gestión de Usuarios (RF1.4)")
         self.tab_audit = self.tabview.add("Bitácora de Auditoría (RF1.3)")
 
+        # Inicialización de contenedores scroll de forma fija y única
+        self.users_scroll = ctk.CTkScrollableFrame(self.tab_users, fg_color="transparent")
+        self.users_scroll.pack(fill="both", expand=True)
+
+        # Usar una única caja de texto ultra-optimizada para la bitácora (1 sola ventana en vez de cientos de widgets)
+        self.audit_text = ctk.CTkTextbox(self.tab_audit, fg_color="#090D16", font=ctk.CTkFont(family="Consolas", size=12), text_color="#E2E8F0", activate_scrollbars=True)
+        self.audit_text.pack(fill="both", expand=True, padx=15, pady=15)
+        
+        # Configurar estilos de tags (¡Sin la opción 'font' para evitar excepciones de escalado en CTk!)
+        self.audit_text.tag_config("time", foreground=COLOR_ACCENT)
+        self.audit_text.tag_config("user", foreground="#38BDF8")
+        self.audit_text.tag_config("action", foreground=COLOR_SUCCESS)
+        self.audit_text.tag_config("details", foreground="#94A3B8")
+        
+        self.rendered_user_count = -1
+        self.rendered_log_count = -1
+
         self.load_users()
         self.load_audit_logs()
 
     def load_users(self):
-        for w in self.tab_users.winfo_children():
+        for w in self.users_scroll.winfo_children():
+            w.destroy()
+            
+        lbl_loading = ctk.CTkLabel(self.users_scroll, text="Cargando usuarios...", text_color=COLOR_TEXT_MUTED)
+        lbl_loading.pack(pady=20)
+
+        def fetch():
+            users = UserModel.get_all()
+            self.after(0, lambda: self._render_users(users))
+            
+        threading.Thread(target=fetch, daemon=True).start()
+
+    def _render_users(self, users):
+        for w in self.users_scroll.winfo_children():
             w.destroy()
 
-        scroll = ctk.CTkScrollableFrame(self.tab_users, fg_color="transparent")
-        scroll.pack(fill="both", expand=True)
-
-        users = UserModel.get_all()
+        if not users:
+            ctk.CTkLabel(self.users_scroll, text="No hay usuarios registrados.", text_color=COLOR_TEXT_MUTED).pack(pady=20)
+            return
 
         for u in users:
-            card = ctk.CTkFrame(scroll, fg_color=COLOR_BG_CARD, corner_radius=10, border_width=1, border_color="#1E293B")
+            card = ctk.CTkFrame(self.users_scroll, fg_color=COLOR_BG_CARD, corner_radius=10, border_width=1, border_color="#1E293B")
             card.pack(fill="x", pady=6)
 
             left_box = ctk.CTkFrame(card, fg_color="transparent")
@@ -155,7 +186,7 @@ class UsersView(ctk.CTkFrame):
         e_nom = ctk.CTkEntry(dialog, placeholder_text="Nombre Completo del Trabajador/Socio", width=350)
         e_nom.pack(pady=6)
 
-        e_email = ctk.CTkEntry(dialog, placeholder_text="Correo (ej. usuario@gmail.com u @hotmail.com)", width=350)
+        e_email = ctk.CTkEntry(dialog, placeholder_text="Correo (ej. usuario@gmail.com)", width=350)
         e_email.pack(pady=6)
 
         ctk.CTkLabel(dialog, text="Perfil / Rol Operativo:", text_color=COLOR_TEXT_MUTED).pack(anchor="w", padx=50, pady=(6, 0))
@@ -176,7 +207,6 @@ class UsersView(ctk.CTkFrame):
             email = e_email.get().strip()
             rol = e_rol.get()
 
-            # Validaciones obligatorias
             ok_req, msg_req = validate_required_fields({
                 "Usuario": user,
                 "Contraseña": pwd,
@@ -206,44 +236,51 @@ class UsersView(ctk.CTkFrame):
         btn_save.pack(pady=12)
 
     def load_audit_logs(self):
-        for w in self.tab_audit.winfo_children():
-            w.destroy()
+        # Muestra mensaje en la propia caja de texto sin destruirla
+        self.audit_text.configure(state="normal")
+        self.audit_text.delete("1.0", "end")
+        self.audit_text.insert("end", "Cargando bitácora de auditoría...\n")
+        self.audit_text.configure(state="disabled")
 
-        scroll = ctk.CTkScrollableFrame(self.tab_audit, fg_color="transparent")
-        scroll.pack(fill="both", expand=True)
+        def fetch():
+            logs = AuditLogModel.get_all()
+            self.after(0, lambda: self._render_audit_logs(logs))
+            
+        threading.Thread(target=fetch, daemon=True).start()
 
-        logs = AuditLogModel.get_all()
+    def _render_audit_logs(self, logs):
+        self.audit_text.configure(state="normal")
+        self.audit_text.delete("1.0", "end")
 
         if not logs:
-            ctk.CTkLabel(scroll, text="No hay registros de auditoría aún.", text_color=COLOR_TEXT_MUTED).pack(pady=30)
+            self.audit_text.insert("end", "No hay registros de auditoría aún.\n")
+            self.audit_text.configure(state="disabled")
             return
 
         for l in logs:
-            row = ctk.CTkFrame(scroll, fg_color=COLOR_BG_CARD, corner_radius=8, border_width=1, border_color="#1E293B")
-            row.pack(fill="x", pady=4)
-
-            left_box = ctk.CTkFrame(row, fg_color="transparent")
-            left_box.pack(side="left", padx=14, pady=8)
-
-            action_lbl = ctk.CTkLabel(
-                left_box, text=f"📌 {l['tipo_accion']} | {l['usuario_nombre']}",
-                font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
-                text_color=COLOR_TEXT_PRIMARY
-            )
-            action_lbl.pack(anchor="w")
-
-            det_lbl = ctk.CTkLabel(
-                left_box, text=f"Detalles: {l['detalles']}",
-                font=ctk.CTkFont(size=11), text_color=COLOR_TEXT_MUTED
-            )
-            det_lbl.pack(anchor="w", pady=(1, 0))
-
-            time_lbl = ctk.CTkLabel(
-                row, text=str(l['fecha_hora']),
-                font=ctk.CTkFont(size=11, weight="bold"), text_color=COLOR_ACCENT
-            )
-            time_lbl.pack(side="right", padx=14)
+            self.audit_text.insert("end", f"[{l['fecha_hora']}] ", "time")
+            self.audit_text.insert("end", f"{l['usuario_nombre']} ", "user")
+            self.audit_text.insert("end", f"({l['tipo_accion']}): ", "action")
+            self.audit_text.insert("end", f"{l['detalles']}\n", "details")
+            
+        self.audit_text.configure(state="disabled")
 
     def refresh_data(self):
-        self.load_users()
-        self.load_audit_logs()
+        # Optimización extrema: Verificar conteo de registros antes de recargar
+        try:
+            count_row = db.fetch_one("SELECT COUNT(*) as cnt FROM auditoria_log")
+            total_logs = count_row['cnt'] if count_row else 0
+            if self.rendered_log_count != total_logs:
+                self.rendered_log_count = total_logs
+                self.load_audit_logs()
+        except Exception:
+            self.load_audit_logs()
+
+        try:
+            users_count_row = db.fetch_one("SELECT COUNT(*) as cnt FROM usuarios")
+            total_users = users_count_row['cnt'] if users_count_row else 0
+            if self.rendered_user_count != total_users:
+                self.rendered_user_count = total_users
+                self.load_users()
+        except Exception:
+            self.load_users()

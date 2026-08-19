@@ -178,3 +178,14 @@ class ClientsView(ctk.CTkFrame):
 
         btn_save = PrimaryButton(dialog, "Guardar Cliente", command=save, width=350)
         btn_save.pack(pady=12)
+
+    def refresh_data(self):
+        try:
+            from database.connection import db
+            count_row = db.fetch_one("SELECT COUNT(*) as cnt FROM clientes")
+            total_cls = count_row['cnt'] if count_row else 0
+            if not hasattr(self, '_cached_clients_count') or self._cached_clients_count != total_cls:
+                self._cached_clients_count = total_cls
+                self.load_clients()
+        except Exception:
+            self.load_clients()

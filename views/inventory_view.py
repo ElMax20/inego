@@ -105,6 +105,29 @@ class InventoryView(ctk.CTkFrame):
                 )
                 name_lbl.pack(side="left")
 
+                # Insignia de Stock en el Header (Píldora compacta y profesional) (RF2.6)
+                is_perm = p['tipo_stock'] == 'Permanente'
+                is_below_min = is_perm and p['stock_actual'] <= p['stock_minimo']
+                
+                if is_perm:
+                    if is_below_min:
+                        badge_color = COLOR_DANGER
+                        badge_txt = f"🚨 RE-STOCK: {p['stock_actual']} unids (Mín: {p['stock_minimo']})"
+                    else:
+                        badge_color = COLOR_SUCCESS
+                        badge_txt = f"Stock: {p['stock_actual']} unids"
+                else:
+                    badge_color = COLOR_WARNING
+                    badge_txt = "Bajo Pedido"
+
+                st_badge = ctk.CTkLabel(
+                    header_box, text=badge_txt,
+                    font=ctk.CTkFont(size=10, weight="bold"),
+                    text_color="#FFFFFF", fg_color=badge_color,
+                    corner_radius=4, padx=8, pady=2
+                )
+                st_badge.pack(side="left", padx=(10, 0))
+
                 # Insignia MÁS VENDIDO
                 if is_top_seller:
                     badge_top = ctk.CTkLabel(
@@ -113,7 +136,7 @@ class InventoryView(ctk.CTkFrame):
                         text_color="#F59E0B", fg_color="#451A03",
                         corner_radius=4, padx=6, pady=2
                     )
-                    badge_top.pack(side="left", padx=(10, 0))
+                    badge_top.pack(side="left", padx=(6, 0))
 
                 desc_lbl = ctk.CTkLabel(
                     left_box, text=f"Categoría: {p['categoria']} | {p['descripcion'] or 'Sin descripción'} | Mínimo de Stock Permitido: {p['stock_minimo']} unids",
@@ -133,36 +156,14 @@ class InventoryView(ctk.CTkFrame):
                 right_box = ctk.CTkFrame(card, fg_color="transparent")
                 right_box.pack(side="right", padx=16, pady=12)
 
-                is_perm = p['tipo_stock'] == 'Permanente'
-                is_below_min = is_perm and p['stock_actual'] <= p['stock_minimo']
-                
-                if is_perm:
-                    if is_below_min:
-                        badge_color = COLOR_DANGER
-                        badge_txt = f"🚨 ALERTA DE STOCK MÍNIMO: {p['stock_actual']} unids (Mín: {p['stock_minimo']})"
-                    else:
-                        badge_color = COLOR_SUCCESS
-                        badge_txt = f"Stock Permanente: {p['stock_actual']} unids (Mín: {p['stock_minimo']})"
-                else:
-                    badge_color = COLOR_WARNING
-                    badge_txt = "Bajo Pedido (Drop-shipping)"
-
-                st_badge = ctk.CTkLabel(
-                    right_box, text=badge_txt,
-                    font=ctk.CTkFont(size=12, weight="bold"),
-                    text_color=badge_color, fg_color="#0F172A",
-                    corner_radius=6, padx=10, pady=4
-                )
-                st_badge.pack(side="left", padx=(0, 10))
-
                 if is_perm:
                     btn_add = AccentButton(right_box, "+ Stock", command=lambda pid=p['id']: self.add_stock_dialog(pid), width=80)
-                    btn_add.pack(side="left", padx=2)
-                    btn_dispatch = PrimaryButton(right_box, "🚚 Despacho", command=lambda pid=p['id']: self.dispatch_stock_dialog(pid), width=90)
-                    btn_dispatch.pack(side="left", padx=2)
+                    btn_add.pack(side="left", padx=3)
+                    btn_dispatch = PrimaryButton(right_box, "🚚 Despacho", command=lambda pid=p['id']: self.dispatch_stock_dialog(pid), width=105)
+                    btn_dispatch.pack(side="left", padx=3)
 
-                btn_link = AccentButton(right_box, "🔗 Enlazar", command=lambda pid=p['id']: self.open_link_supplier_dialog(pid), width=85)
-                btn_link.pack(side="left", padx=2)
+                btn_link = AccentButton(right_box, "🔗 Enlazar", command=lambda pid=p['id']: self.open_link_supplier_dialog(pid), width=90)
+                btn_link.pack(side="left", padx=3)
 
         if raw_phrase and displayed_count == 0:
             lbl = ctk.CTkLabel(self.scroll, text=f"No se encontraron productos para la frase de búsqueda '{raw_phrase}'.", text_color=COLOR_TEXT_MUTED)
@@ -290,7 +291,22 @@ class InventoryView(ctk.CTkFrame):
             self.load_products()
 
     def refresh_data(self):
-        self.load_products()
+        try:
+            from database.connection import db
+            count_row = db.fetch_one("SELECT COUNT(*) as cnt, SUM(stock_actual) as sm FROM productos")
+            total_prods = count_row['cnt'] if count_row else 0
+            stock_sum = count_row['sm'] if count_row else 0
+            
+            link_row = db.fetch_one("SELECT COUNT(*) as cnt, SUM(precio_cotizado) as sm FROM producto_proveedor")
+            total_links = link_row['cnt'] if link_row else 0
+            cost_sum = link_row['sm'] if link_row else 0
+            
+            current_state = (total_prods, stock_sum, total_links, cost_sum)
+            if not hasattr(self, '_cached_inventory_state') or self._cached_inventory_state != current_state:
+                self._cached_inventory_state = current_state
+                self.load_products()
+        except Exception:
+            self.load_products()
 
     def clear_search(self):
         self.search_entry.delete(0, 'end')

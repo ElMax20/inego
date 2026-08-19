@@ -131,4 +131,14 @@ class ExpensesView(ctk.CTkFrame):
         btn_save.pack(pady=20)
 
     def refresh_data(self):
-        self.load_expenses()
+        try:
+            from database.connection import db
+            count_row = db.fetch_one("SELECT COUNT(*) as cnt, SUM(monto) as sm FROM gastos")
+            total_exp = count_row['cnt'] if count_row else 0
+            exp_sum = count_row['sm'] if count_row else 0
+            current_state = (total_exp, exp_sum)
+            if not hasattr(self, '_cached_expenses_state') or self._cached_expenses_state != current_state:
+                self._cached_expenses_state = current_state
+                self.load_expenses()
+        except Exception:
+            self.load_expenses()

@@ -212,4 +212,12 @@ class SuppliersView(ctk.CTkFrame):
         btn_save.pack(pady=12)
 
     def refresh_data(self):
-        self.load_suppliers()
+        try:
+            from database.connection import db
+            count_row = db.fetch_one("SELECT COUNT(*) as cnt FROM proveedores")
+            total_sups = count_row['cnt'] if count_row else 0
+            if not hasattr(self, '_cached_suppliers_count') or self._cached_suppliers_count != total_sups:
+                self._cached_suppliers_count = total_sups
+                self.load_suppliers()
+        except Exception:
+            self.load_suppliers()

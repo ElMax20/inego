@@ -396,4 +396,14 @@ class QuotesView(ctk.CTkFrame):
         btn_deliver.pack(side="right", padx=5, expand=True)
 
     def refresh_data(self):
-        self.load_quotes()
+        try:
+            from database.connection import db
+            count_row = db.fetch_one("SELECT COUNT(*) as cnt, SUM(total) as sm FROM cotizaciones")
+            total_q = count_row['cnt'] if count_row else 0
+            total_sum = count_row['sm'] if count_row else 0
+            current_state = (total_q, total_sum)
+            if not hasattr(self, '_cached_quotes_state') or self._cached_quotes_state != current_state:
+                self._cached_quotes_state = current_state
+                self.load_quotes()
+        except Exception:
+            self.load_quotes()

@@ -123,3 +123,14 @@ class PayrollView(ctk.CTkFrame):
 
         btn_save = PrimaryButton(dialog, "Calcular y Guardar Rol", command=save, width=350)
         btn_save.pack(pady=20)
+
+    def refresh_data(self):
+        try:
+            from database.connection import db
+            count_row = db.fetch_one("SELECT COUNT(*) as cnt FROM roles_pago")
+            total_pr = count_row['cnt'] if count_row else 0
+            if not hasattr(self, '_cached_payroll_count') or self._cached_payroll_count != total_pr:
+                self._cached_payroll_count = total_pr
+                self.load_payroll()
+        except Exception:
+            self.load_payroll()
