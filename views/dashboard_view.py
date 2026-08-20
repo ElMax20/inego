@@ -109,10 +109,10 @@ class DashboardView(ctk.CTkFrame):
         perm_prods = db.fetch_all("SELECT * FROM productos WHERE tipo_stock = 'Permanente'")
         for p in perm_prods:
             is_alert = p['stock_actual'] <= p['stock_minimo']
-            row_color = "#381414" if is_alert else "#0F172A"
+            row_color = ("#FEE2E2", "#381414") if is_alert else ("#F5F8FA", "#2B3342")
             text_color = COLOR_DANGER if is_alert else COLOR_TEXT_PRIMARY
 
-            row = ctk.CTkFrame(self.stock_list_frame, fg_color=row_color, corner_radius=8, border_width=1, border_color="#334155")
+            row = ctk.CTkFrame(self.stock_list_frame, fg_color=row_color, corner_radius=8, border_width=1, border_color=("#D5DEE5", "#3F4A5C"))
             row.pack(fill="x", pady=4)
 
             lbl_text = f"🚨 {p['nombre']} [{p['codigo']}]" if is_alert else f"• {p['nombre']} [{p['codigo']}]"

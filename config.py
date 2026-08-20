@@ -6,34 +6,36 @@ COMPANY_SLOGAN = "Ferretería, Equipos, Suministros de Oficina y Producción"
 COMPANY_LOCATION = "Guayaquil, Ecuador"
 COMPANY_LOGO_TITLE = "Árbol de la Vida"
 
-# Paleta de Colores "Obsidian & Midnight Glass" (SaaS UI Moderno)
-COLOR_BG_MAIN = "#0B0F19"          # Obsidian Dark Space (Fondo Principal)
-COLOR_BG_SIDEBAR = "#0F172A"       # Midnight Slate (Barra Lateral)
-COLOR_BG_CARD = "#1E293B"          # SaaS Glass Elevated Card
-COLOR_BG_CARD_HOVER = "#334155"    # Card Hover Highlight
-COLOR_BORDER = "#1E293B"           # Crisp Border Subtlety
-COLOR_BORDER_LIGHT = "#334155"     # Borde sutil acentuado
+# Paleta de Colores "Twinkle Bronze & Slate" (Tuplas Duales Light/Dark)
+# Formato CustomTkinter: (Modo_Claro_Por_Defecto, Modo_Oscuro)
 
-# Acentos y Neón
-COLOR_PRIMARY = "#0284C7"          # Electric Sky Blue
-COLOR_PRIMARY_HOVER = "#0369A1"    # Electric Sky Dark
-COLOR_ACCENT = "#38BDF8"           # Cyan Neon Glow
-COLOR_ACCENT_HOVER = "#0EA5E9"     # Cyan Hover
-COLOR_LIGHT_BLUE = "#E0F2FE"       # Ice Blue Pill Text
-COLOR_PURPLE = "#8B5CF6"           # Indigo SaaS Accent
+COLOR_BG_MAIN = ("#F0F4F7", "#1E2430")          # Fondo Principal
+COLOR_BG_SIDEBAR = ("#E2E8EC", "#171C26")       # Barra Lateral
+COLOR_BG_CARD = ("#FFFFFF", "#2B3342")          # Tarjetas Elevadas
+COLOR_BG_CARD_HOVER = ("#E8EEF2", "#384357")    # Hover en Tarjetas
+COLOR_BORDER = ("#D5DEE5", "#3F4A5C")           # Bordes Sutiles
+COLOR_BORDER_LIGHT = ("#E2E9F0", "#49566B")     # Borde Acentuado
 
-# Jerarquía de Textos High-Contrast
-COLOR_TEXT_PRIMARY = "#F8FAFC"     # Blanco Puro / Alta Legibilidad
-COLOR_TEXT_SECONDARY = "#CBD5E1"   # Gris Claro Suave
-COLOR_TEXT_MUTED = "#64748B"       # Muted Label Text
+# Acentos Bronce y Acero
+COLOR_PRIMARY = ("#B88865", "#D4A373")          # Warm Sandy Bronze
+COLOR_PRIMARY_HOVER = ("#A07352", "#C89B7B")    # Bronze Dark Hover
+COLOR_ACCENT = ("#3F4A5C", "#C89B7B")           # Steel Blue / Bronze Glow
+COLOR_ACCENT_HOVER = ("#2D3644", "#B08264")     # Accent Dark Hover
+COLOR_LIGHT_BLUE = ("#4A5568", "#F0F4F7")       # Soft Pill Text
+COLOR_PURPLE = ("#7C3AED", "#A78BFA")           # Royal Purple Accent
+
+# Jerarquía de Textos
+COLOR_TEXT_PRIMARY = ("#1A202C", "#F8FAFC")     # Texto Principal Alto Contraste
+COLOR_TEXT_SECONDARY = ("#4A5568", "#CBD5E1")   # Texto Secundario Suave
+COLOR_TEXT_MUTED = ("#718096", "#8F9CAE")       # Muted Label Text
 
 # Indicadores de Estado y Alertas
-COLOR_SUCCESS = "#10B981"          # Emerald Green Status (Activo/En Stock)
-COLOR_SUCCESS_BG = "#064E3B"       # Emerald Pill Background
-COLOR_WARNING = "#F59E0B"          # Amber Alert (Crédito 72 días / Re-stock)
-COLOR_WARNING_BG = "#451A03"       # Amber Pill Background
-COLOR_DANGER = "#EF4444"           # Crimson Danger (Agotado / Bloqueo)
-COLOR_DANGER_BG = "#451212"        # Crimson Pill Background
+COLOR_SUCCESS = ("#059669", "#10B981")          # Emerald Green Status
+COLOR_SUCCESS_BG = ("#D1FAE5", "#064E3B")       # Emerald Pill Background
+COLOR_WARNING = ("#D97706", "#F59E0B")          # Amber Alert
+COLOR_WARNING_BG = ("#FEF3C7", "#451A03")       # Amber Pill Background
+COLOR_DANGER = ("#DC2626", "#EF4444")           # Crimson Danger
+COLOR_DANGER_BG = ("#FEE2E2", "#451212")        # Crimson Pill Background
 
 # Rutas del Sistema
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

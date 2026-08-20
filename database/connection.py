@@ -89,6 +89,13 @@ class DatabaseManager:
                 """)
 
                 cursor.execute("""
+                CREATE TABLE IF NOT EXISTS categorias_producto (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre TEXT NOT NULL UNIQUE
+                );
+                """)
+
+                cursor.execute("""
                 CREATE TABLE IF NOT EXISTS categorias_proveedor (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nombre TEXT NOT NULL UNIQUE,
@@ -107,12 +114,18 @@ class DatabaseManager:
                     direccion TEXT,
                     ubicacion TEXT DEFAULT 'Guayaquil',
                     categoria_id INTEGER,
-                    tipo_proveedor TEXT DEFAULT 'Guayaquil (90%)',
+                    tipo_proveedor TEXT DEFAULT 'Guayaquil',
+                    tipo_producto TEXT DEFAULT 'Insumos Industriales',
                     rating INTEGER DEFAULT 5,
                     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (categoria_id) REFERENCES categorias_proveedor(id)
                 );
                 """)
+
+                try:
+                    cursor.execute("ALTER TABLE proveedores ADD COLUMN tipo_producto TEXT DEFAULT 'Insumos Industriales'")
+                except Exception:
+                    pass
 
                 cursor.execute("""
                 CREATE TABLE IF NOT EXISTS productos (

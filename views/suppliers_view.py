@@ -33,11 +33,23 @@ class SuppliersView(ctk.CTkFrame):
         self.filter_category = ctk.CTkOptionMenu(
             filter_bar,
             values=["[Todas las Categorías]"],
+            fg_color=("#3F4A5C", "#2B3342"),
+            button_color=("#374151", "#232936"),
+            button_hover_color=("#2B3342", "#1C2230"),
+            dropdown_fg_color=("#FFFFFF", "#2B3342"),
+            dropdown_hover_color=("#E2E8F0", "#384357"),
+            dropdown_text_color=COLOR_TEXT_PRIMARY,
+            text_color="#FFFFFF",
             command=lambda val: self.load_suppliers()
         )
         self.filter_category.pack(side="left")
 
-        self.tabview = ctk.CTkTabview(self, fg_color=COLOR_BG_MAIN, segmented_button_fg_color=COLOR_BG_CARD, segmented_button_selected_color=COLOR_ACCENT)
+        self.tabview = ctk.CTkTabview(
+            self, fg_color=COLOR_BG_MAIN,
+            segmented_button_fg_color=COLOR_BG_CARD,
+            segmented_button_selected_color=("#B88865", "#D4A373"),
+            segmented_button_selected_hover_color=("#A07352", "#C89B7B")
+        )
         self.tabview.pack(fill="both", expand=True, padx=20, pady=10)
 
         self.tab_gye = self.tabview.add("Guayaquil (90%)")

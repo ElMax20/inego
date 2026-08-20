@@ -55,10 +55,11 @@ class UsersView(ctk.CTkFrame):
         self.audit_text = ctk.CTkTextbox(self.tab_audit, fg_color="#090D16", font=ctk.CTkFont(family="Consolas", size=12), text_color="#E2E8F0", activate_scrollbars=True)
         self.audit_text.pack(fill="both", expand=True, padx=15, pady=15)
         
-        # Configurar estilos de tags (¡Sin la opción 'font' para evitar excepciones de escalado en CTk!)
-        self.audit_text.tag_config("time", foreground=COLOR_ACCENT)
+        color_acc = COLOR_ACCENT[1] if isinstance(COLOR_ACCENT, tuple) else COLOR_ACCENT
+        color_succ = COLOR_SUCCESS[1] if isinstance(COLOR_SUCCESS, tuple) else COLOR_SUCCESS
+        self.audit_text.tag_config("time", foreground=color_acc)
         self.audit_text.tag_config("user", foreground="#38BDF8")
-        self.audit_text.tag_config("action", foreground=COLOR_SUCCESS)
+        self.audit_text.tag_config("action", foreground=color_succ)
         self.audit_text.tag_config("details", foreground="#94A3B8")
         
         self.rendered_user_count = -1

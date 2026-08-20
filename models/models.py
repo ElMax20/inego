@@ -80,6 +80,10 @@ class ProductModel:
     def update_stock(producto_id, cantidad_delta):
         return db.execute_query("UPDATE productos SET stock_actual = stock_actual + %s WHERE id = %s", (cantidad_delta, producto_id))
 
+    @staticmethod
+    def delete(product_id):
+        return db.execute_query("DELETE FROM productos WHERE id = %s", (product_id,))
+
 
 class SupplierModel:
     @staticmethod

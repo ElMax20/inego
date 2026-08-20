@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from views.components import PrimaryButton, AccentButton
-from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
+from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_PRIMARY, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_SUCCESS, COLOR_WARNING, COLOR_DANGER
 from models.models import ProductModel, AuditLogModel, SupplierModel
 from database.connection import db
 from utils.validators import validate_required_fields
@@ -117,7 +117,7 @@ class InventoryView(ctk.CTkFrame):
                         badge_color = COLOR_SUCCESS
                         badge_txt = f"Stock: {p['stock_actual']} unids"
                 else:
-                    badge_color = COLOR_WARNING
+                    badge_color = COLOR_PRIMARY
                     badge_txt = "Bajo Pedido"
 
                 st_badge = ctk.CTkLabel(
@@ -133,7 +133,7 @@ class InventoryView(ctk.CTkFrame):
                     badge_top = ctk.CTkLabel(
                         header_box, text="🔥 MÁS VENDIDO",
                         font=ctk.CTkFont(size=10, weight="bold"),
-                        text_color="#F59E0B", fg_color="#451A03",
+                        text_color=COLOR_PRIMARY, fg_color=("#FDF8F3", "#1C2230"),
                         corner_radius=4, padx=6, pady=2
                     )
                     badge_top.pack(side="left", padx=(6, 0))

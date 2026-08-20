@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from views.components import PrimaryButton, AccentButton
-from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_WARNING, COLOR_SUCCESS, COLOR_DANGER
+from config import COLOR_BG_MAIN, COLOR_BG_CARD, COLOR_PRIMARY, COLOR_TEXT_PRIMARY, COLOR_TEXT_MUTED, COLOR_ACCENT, COLOR_WARNING, COLOR_SUCCESS, COLOR_DANGER
 from models.models import ClientModel
 from database.connection import db
 
@@ -58,16 +58,17 @@ class ClientsView(ctk.CTkFrame):
 
             is_b2b = c['tipo_cliente'] == 'B2B'
             badge_txt = "Crédito Concedido: 72 Días" if is_b2b else "Sin Crédito (Pago al Contado)"
-            badge_color = COLOR_WARNING if is_b2b else COLOR_SUCCESS
+            badge_fg = ("#FDF8F3", "#2B3342")
+            badge_txt_color = COLOR_PRIMARY if is_b2b else COLOR_SUCCESS
 
             badge = ctk.CTkLabel(
                 right_box, text=badge_txt,
                 font=ctk.CTkFont(size=12, weight="bold"),
-                text_color=badge_color, fg_color="#0F172A", corner_radius=6, padx=10, pady=4
+                text_color=badge_txt_color, fg_color=badge_fg, corner_radius=6, padx=10, pady=4
             )
             badge.pack(side="left", padx=(0, 10))
 
-            btn_hist = AccentButton(right_box, "Historial", command=lambda cid=c['id'], cname=c['razon_social_nombre']: self.show_history(cid, cname), width=90)
+            btn_hist = AccentButton(right_box, "Historial", command=lambda cid=c['id'], cname=c['razon_social_nombre']: self.show_history(cid, cname), width=100)
             btn_hist.pack(side="left")
 
     def show_history(self, client_id, client_name):
