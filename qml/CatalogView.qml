@@ -400,14 +400,18 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO SECUNDARIO PARA AGREGAR NUEVA CATEGORÍA (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP MODAL SECUNDARIO PARA AGREGAR NUEVA CATEGORÍA (COLOR UNIFORME TOTAL)
+    Popup {
         id: newCategoryDialog
         parent: Overlay.overlay
-        title: "Agregar Nueva Categoría"
         anchors.centerIn: parent
         modal: true
+        focus: true
         width: 400
+        height: 190
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -417,30 +421,54 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 12
-            width: parent.width - 24
 
-            Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+            Text { text: "Agregar Nueva Categoría"; font.pixelSize: 14; font.bold: true; color: theme.colorBronze }
+            Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
             TextField { id: newCatName; placeholderText: "ej. Insumos Médicos / Químicos"; width: parent.width; color: theme.textPrimary }
-        }
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        onAccepted: {
-            if (newCatName.text.trim() !== "") {
-                backend.addCategory(newCatName.text)
-                catRoot.loadData(txtSearch.text)
+            Row {
+                anchors.right: parent.right
+                spacing: 10
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Guardar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorBronze; radius: 6 }
+                    onClicked: {
+                        if (newCatName.text.trim() !== "") {
+                            backend.addCategory(newCatName.text)
+                            catRoot.loadData(txtSearch.text)
+                        }
+                        newCategoryDialog.close()
+                    }
+                }
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: newCategoryDialog.close()
+                }
             }
         }
     }
 
-    // DIÁLOGO MENSAJE DE ERROR/ALERTA EN CATÁLOGO (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP MODAL AVISO DE ERROR EN CATÁLOGO (COLOR UNIFORME TOTAL)
+    Popup {
         id: catErrDialog
         parent: Overlay.overlay
-        title: "Creación de Producto"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 190
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -450,32 +478,67 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 14
-            width: parent.width - 24
+
+            Text {
+                text: "Creación de Producto"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
             Text {
                 id: catErrTxt
                 text: ""
                 color: theme.textPrimary
-                font.pixelSize: 13
+                font.pixelSize: 12
                 font.bold: true
                 wrapMode: Text.WordWrap
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
             }
-        }
 
-        standardButtons: Dialog.Ok
+            Item { height: 1; width: 1 }
+
+            Rectangle {
+                width: 120
+                height: 34
+                radius: 6
+                color: theme.colorBronze
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Aceptar"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 11
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: catErrDialog.close()
+                }
+            }
+        }
     }
 
-    // DIÁLOGO CONFIRMACIÓN ELIMINAR (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP CONFIRMACIÓN ELIMINAR (COLOR UNIFORME TOTAL)
+    Popup {
         id: confirmDeleteDialog
         parent: Overlay.overlay
-        title: "Confirmar Eliminación"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 200
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -485,37 +548,69 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 14
-            width: parent.width - 24
+
+            Text {
+                text: "Confirmar Eliminación"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
             Text {
                 text: catRoot.selectedProduct ? "¿Está seguro que desea eliminar el producto '" + catRoot.selectedProduct.nombre + "' del catálogo?\nEsta acción no se puede deshacer." : ""
                 color: theme.textPrimary
-                font.pixelSize: 13
+                font.pixelSize: 12
                 font.bold: true
                 wrapMode: Text.WordWrap
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
             }
-        }
 
-        standardButtons: Dialog.Yes | Dialog.No
-        onAccepted: {
-            if (catRoot.selectedProduct) {
-                backend.deleteProduct(catRoot.selectedProduct.id)
-                catRoot.loadData(txtSearch.text)
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
+
+                Button {
+                    height: 34
+                    width: 100
+                    contentItem: Text { text: "Sí, Eliminar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorDanger; radius: 6 }
+                    onClicked: {
+                        if (catRoot.selectedProduct) {
+                            backend.deleteProduct(catRoot.selectedProduct.id)
+                            catRoot.loadData(txtSearch.text)
+                        }
+                        confirmDeleteDialog.close()
+                    }
+                }
+
+                Button {
+                    height: 34
+                    width: 100
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: confirmDeleteDialog.close()
+                }
             }
         }
     }
 
-    // DIÁLOGO ENLAZAR PROVEEDOR (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP ENLAZAR PROVEEDOR (COLOR UNIFORME TOTAL)
+    Popup {
         id: linkProviderDialog
         parent: Overlay.overlay
-        title: "Enlazar Producto con otro Proveedor"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 200
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -525,14 +620,23 @@ ScrollView {
         }
 
         contentItem: Column {
-            spacing: 12
-            width: parent.width - 24
+            anchors.fill: parent
+            spacing: 14
+
+            Text {
+                text: "Enlazar Producto con otro Proveedor"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
             Text {
                 text: "Seleccione el proveedor al que desea enlazar este producto:"
                 color: theme.textPrimary
+                font.pixelSize: 11
                 font.bold: true
-                font.pixelSize: 12
             }
 
             ComboBox {
@@ -540,13 +644,32 @@ ScrollView {
                 width: parent.width
                 model: catRoot.suppliersList
             }
-        }
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        onAccepted: {
-            if (catRoot.selectedProduct && providerCombo.currentText !== "") {
-                backend.linkProductWithProvider(catRoot.selectedProduct.id, providerCombo.currentText)
-                catRoot.loadData(txtSearch.text)
+            Row {
+                anchors.right: parent.right
+                spacing: 10
+
+                Button {
+                    height: 32
+                    width: 100
+                    contentItem: Text { text: "Enlazar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorBronze; radius: 6 }
+                    onClicked: {
+                        if (catRoot.selectedProduct && providerCombo.currentText !== "") {
+                            backend.linkProductWithProvider(catRoot.selectedProduct.id, providerCombo.currentText)
+                            catRoot.loadData(txtSearch.text)
+                        }
+                        linkProviderDialog.close()
+                    }
+                }
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: linkProviderDialog.close()
+                }
             }
         }
     }

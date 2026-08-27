@@ -291,14 +291,18 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO AGREGAR NUEVA CATEGORÍA DINÁMICAMENTE (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP MODAL AGREGAR NUEVA CATEGORÍA DINÁMICAMENTE (COLOR UNIFORME TOTAL)
+    Popup {
         id: newCategoryDialog
         parent: Overlay.overlay
-        title: "Nueva Categoría"
         anchors.centerIn: parent
         modal: true
+        focus: true
         width: 400
+        height: 190
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -308,43 +312,66 @@ ScrollView {
         }
 
         contentItem: Column {
-            width: parent.width - 24
-            spacing: 10
+            anchors.fill: parent
+            spacing: 12
 
-            Text { text: "Ingrese el nombre del nuevo rubro/categoría:"; font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+            Text { text: "Nueva Categoría"; font.pixelSize: 14; font.bold: true; color: theme.colorBronze }
+            Text { text: "Ingrese el nombre del nuevo rubro/categoría:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
             TextField {
                 id: txtNewCategoryName
                 width: parent.width
                 placeholderText: "ej. Alimentación, Publicidad..."
                 color: theme.textPrimary
             }
-        }
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        onAccepted: {
-            if (txtNewCategoryName.text.trim() !== "") {
-                categoryModel.insert(categoryModel.count - 1, {"text": txtNewCategoryName.text.trim()})
-                expRubro.currentIndex = categoryModel.count - 2
-            } else {
-                expRubro.currentIndex = 0
+            Row {
+                anchors.right: parent.right
+                spacing: 10
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Guardar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorBronze; radius: 6 }
+                    onClicked: {
+                        if (txtNewCategoryName.text.trim() !== "") {
+                            categoryModel.insert(categoryModel.count - 1, {"text": txtNewCategoryName.text.trim()})
+                            expRubro.currentIndex = categoryModel.count - 2
+                        } else {
+                            expRubro.currentIndex = 0
+                        }
+                        txtNewCategoryName.text = ""
+                        newCategoryDialog.close()
+                    }
+                }
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: {
+                        expRubro.currentIndex = 0
+                        txtNewCategoryName.text = ""
+                        newCategoryDialog.close()
+                    }
+                }
             }
-            txtNewCategoryName.text = ""
-        }
-
-        onRejected: {
-            expRubro.currentIndex = 0
-            txtNewCategoryName.text = ""
         }
     }
 
-    // DIÁLOGO DE ERROR DE REGISTRO (SOBRE OVERLAY CON ALTO CONTRASTE Y MÁXIMA LEGIBILIDAD)
-    Dialog {
+    // POPUP MODAL DE ERROR DE REGISTRO (COLOR UNIFORME TOTAL)
+    Popup {
         id: expErrDialog
         parent: Overlay.overlay
-        title: "Registro de Gasto"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 190
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -354,21 +381,52 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 14
-            width: parent.width - 24
+
+            Text {
+                text: "Registro de Gasto"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
             Text {
                 id: expErrTxt
                 text: ""
                 color: theme.textPrimary
-                font.pixelSize: 13
+                font.pixelSize: 12
                 font.bold: true
                 wrapMode: Text.WordWrap
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
             }
-        }
 
-        standardButtons: Dialog.Ok
+            Item { height: 1; width: 1 }
+
+            Rectangle {
+                width: 120
+                height: 34
+                radius: 6
+                color: theme.colorBronze
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Aceptar"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 11
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: expErrDialog.close()
+                }
+            }
+        }
     }
 }

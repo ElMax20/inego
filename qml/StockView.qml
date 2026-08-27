@@ -189,14 +189,18 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO DESPACHAR STOCK (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP DESPACHAR STOCK (COLOR UNIFORME TOTAL)
+    Popup {
         id: dispatchDialog
         parent: Overlay.overlay
-        title: "📦 Despachar Unidades de Stock"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 230
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -206,21 +210,28 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 12
-            width: parent.width - 24
+
+            Text {
+                text: "📦 Despachar Unidades de Stock"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+            }
 
             Text {
                 text: stockRoot.selectedProduct ? "Stock disponible actual: " + stockRoot.selectedProduct.stock_actual + " unidades" : ""
                 font.bold: true
-                color: theme.colorBronze
-                font.pixelSize: 13
+                color: theme.colorSuccess
+                font.pixelSize: 12
             }
 
             Text {
                 text: "Ingrese la cantidad de unidades que desea despachar:"
                 color: theme.textPrimary
                 font.bold: true
-                font.pixelSize: 12
+                font.pixelSize: 11
             }
 
             TextField {
@@ -232,31 +243,54 @@ ScrollView {
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
             }
-        }
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        onAccepted: {
-            if (stockRoot.selectedProduct) {
-                var q = parseInt(dispatchQty.text) || 1
-                var resStr = backend.dispatchStock(stockRoot.selectedProduct.id, q)
-                var res = JSON.parse(resStr)
-                if (!res.success) {
-                    stockErrTxt.text = res.message
-                    stockErrDialog.open()
+            Row {
+                anchors.right: parent.right
+                spacing: 10
+
+                Button {
+                    height: 32
+                    width: 100
+                    contentItem: Text { text: "Despachar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorBronze; radius: 6 }
+                    onClicked: {
+                        if (stockRoot.selectedProduct) {
+                            var q = parseInt(dispatchQty.text) || 1
+                            var resStr = backend.dispatchStock(stockRoot.selectedProduct.id, q)
+                            var res = JSON.parse(resStr)
+                            if (!res.success) {
+                                stockErrTxt.text = res.message
+                                stockErrDialog.open()
+                            }
+                            stockRoot.loadData(txtSearch.text)
+                        }
+                        dispatchDialog.close()
+                    }
                 }
-                stockRoot.loadData(txtSearch.text)
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: dispatchDialog.close()
+                }
             }
         }
     }
 
-    // DIÁLOGO RENOVAR STOCK (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP RENOVAR STOCK (COLOR UNIFORME TOTAL)
+    Popup {
         id: renewDialog
         parent: Overlay.overlay
-        title: "🔄 Renovar y Reordenar Stock"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 200
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -266,14 +300,21 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 12
-            width: parent.width - 24
+
+            Text {
+                text: "🔄 Renovar y Reordenar Stock"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+            }
 
             Text {
                 text: "Ingrese la cantidad de unidades para renovación / re-stock:"
                 color: theme.textPrimary
                 font.bold: true
-                font.pixelSize: 12
+                font.pixelSize: 11
             }
 
             TextField {
@@ -285,26 +326,49 @@ ScrollView {
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
             }
-        }
 
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        onAccepted: {
-            if (stockRoot.selectedProduct) {
-                var q = parseInt(renewQty.text) || 10
-                backend.renewStock(stockRoot.selectedProduct.id, q)
-                stockRoot.loadData(txtSearch.text)
+            Row {
+                anchors.right: parent.right
+                spacing: 10
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Renovar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorBronze; radius: 6 }
+                    onClicked: {
+                        if (stockRoot.selectedProduct) {
+                            var q = parseInt(renewQty.text) || 10
+                            backend.renewStock(stockRoot.selectedProduct.id, q)
+                            stockRoot.loadData(txtSearch.text)
+                        }
+                        renewDialog.close()
+                    }
+                }
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: renewDialog.close()
+                }
             }
         }
     }
 
-    // DIÁLOGO MODAL AVISO / ERROR CUANDO SE INTENTA DESPACHAR MÁS DE LO DISPONIBLE (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP MODAL AVISO / ERROR CUANDO SE INTENTA DESPACHAR MÁS DE LO DISPONIBLE (COLOR UNIFORME TOTAL)
+    Popup {
         id: stockErrDialog
         parent: Overlay.overlay
-        title: "Control de Despacho de Stock"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 190
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -314,21 +378,52 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 14
-            width: parent.width - 24
+
+            Text {
+                text: "Control de Despacho de Stock"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
             Text {
                 id: stockErrTxt
                 text: ""
                 color: theme.textPrimary
-                font.pixelSize: 13
+                font.pixelSize: 12
                 font.bold: true
                 wrapMode: Text.WordWrap
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
             }
-        }
 
-        standardButtons: Dialog.Ok
+            Item { height: 1; width: 1 }
+
+            Rectangle {
+                width: 120
+                height: 34
+                radius: 6
+                color: theme.colorBronze
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Aceptar"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 11
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: stockErrDialog.close()
+                }
+            }
+        }
     }
 }

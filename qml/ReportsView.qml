@@ -82,15 +82,20 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO CONFIRMACIÓN DESCARGA REPORTE (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUP MODAL CONFIRMACIÓN DESCARGA REPORTE (COLOR UNIFORME TOTAL)
+    Popup {
         id: infoDialog
         parent: Overlay.overlay
-        title: "Confirmación de Descarga"
         anchors.centerIn: parent
         modal: true
+        focus: true
         width: 440
+        height: 190
+        padding: 16
+
         property alias text: infoTxt.text
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -100,21 +105,52 @@ ScrollView {
         }
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 14
-            width: parent.width - 24
+
+            Text {
+                text: "Confirmación de Descarga"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
             Text {
                 id: infoTxt
                 text: ""
                 color: theme.textPrimary
-                font.pixelSize: 13
+                font.pixelSize: 12
                 font.bold: true
                 wrapMode: Text.WordWrap
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
             }
-        }
 
-        standardButtons: Dialog.Ok
+            Item { height: 1; width: 1 }
+
+            Rectangle {
+                width: 120
+                height: 34
+                radius: 6
+                color: theme.colorBronze
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Aceptar"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 11
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: infoDialog.close()
+                }
+            }
+        }
     }
 }

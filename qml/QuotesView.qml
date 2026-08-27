@@ -608,15 +608,18 @@ ScrollView {
         }
     }
 
-    // DIÁLOGOS DE CONFIRMACIÓN Y CAMBIO DE CANTIDAD PARA PRODUCTOS DUPLICADOS
-    // DIÁLOGOS DE CONFIRMACIÓN Y CAMBIO DE CANTIDAD PARA PRODUCTOS DUPLICADOS (SOBRE OVERLAY CON ALTO CONTRASTE)
-    Dialog {
+    // POPUPS MODALES DE CONFIRMACIÓN Y CAMBIO DE CANTIDAD PARA PRODUCTOS DUPLICADOS (COLOR UNIFORME TOTAL)
+    Popup {
         id: duplicateConfirmDialog
         parent: Overlay.overlay
-        title: "Producto Duplicado"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 190
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -629,8 +632,17 @@ ScrollView {
         property int dupIndex: -1
 
         contentItem: Column {
+            anchors.fill: parent
             spacing: 14
-            width: parent.width - 24
+
+            Text {
+                text: "Producto Duplicado"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
 
             Text {
                 width: parent.width
@@ -638,25 +650,47 @@ ScrollView {
                 text: "Este objeto ya está en la cotización, ¿Desea cambiar la cantidad?"
                 color: theme.textPrimary
                 font.bold: true
-                font.pixelSize: 13
+                font.pixelSize: 12
                 horizontalAlignment: Text.AlignHCenter
             }
-        }
 
-        standardButtons: Dialog.Yes | Dialog.No
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
 
-        onAccepted: {
-            changeQtyDialog.openForItem(dupItem, dupIndex)
+                Button {
+                    height: 34
+                    width: 100
+                    contentItem: Text { text: "Sí, Cambiar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorBronze; radius: 6 }
+                    onClicked: {
+                        duplicateConfirmDialog.close()
+                        changeQtyDialog.openForItem(duplicateConfirmDialog.dupItem, duplicateConfirmDialog.dupIndex)
+                    }
+                }
+
+                Button {
+                    height: 34
+                    width: 100
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: duplicateConfirmDialog.close()
+                }
+            }
         }
     }
 
-    Dialog {
+    Popup {
         id: changeQtyDialog
         parent: Overlay.overlay
-        title: "Modificar Cantidad"
         anchors.centerIn: parent
         modal: true
-        width: 420
+        focus: true
+        width: 440
+        height: 230
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
 
         background: Rectangle {
             color: theme.bgCard
@@ -676,13 +710,20 @@ ScrollView {
         }
 
         contentItem: Column {
-            width: parent.width - 24
+            anchors.fill: parent
             spacing: 12
+
+            Text {
+                text: "Modificar Cantidad"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorBronze
+            }
 
             Text {
                 text: "Objeto: " + (changeQtyDialog.targetItem ? changeQtyDialog.targetItem.nombre : "")
                 font.bold: true
-                font.pixelSize: 13
+                font.pixelSize: 12
                 color: theme.textPrimary
                 wrapMode: Text.Wrap
                 width: parent.width
@@ -694,13 +735,6 @@ ScrollView {
                 color: theme.textMuted
             }
 
-            Text {
-                text: "Ingrese la nueva cantidad:"
-                font.pixelSize: 11
-                font.bold: true
-                color: theme.textPrimary
-            }
-
             TextField {
                 id: txtNewQtyVal
                 width: parent.width
@@ -708,23 +742,41 @@ ScrollView {
                 text: "1"
                 inputMethodHints: Qt.ImhDigitsOnly
             }
-        }
 
-        standardButtons: Dialog.Save | Dialog.Cancel
+            Row {
+                anchors.right: parent.right
+                spacing: 10
 
-        onAccepted: {
-            var newQty = parseInt(txtNewQtyVal.text) || 1
-            if (targetIndex >= 0 && targetIndex < newQuotePopup.cart.length) {
-                var item = newQuotePopup.cart[targetIndex]
-                item.cantidad = newQty
-                item.subtotal_linea = newQty * item.precio_venta
-                
-                var temp = []
-                for (var i = 0; i < newQuotePopup.cart.length; i++) {
-                    temp.push(newQuotePopup.cart[i])
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Guardar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorBronze; radius: 6 }
+                    onClicked: {
+                        var newQty = parseInt(txtNewQtyVal.text) || 1
+                        if (changeQtyDialog.targetIndex >= 0 && changeQtyDialog.targetIndex < newQuotePopup.cart.length) {
+                            var item = newQuotePopup.cart[changeQtyDialog.targetIndex]
+                            item.cantidad = newQty
+                            item.subtotal_linea = newQty * item.precio_venta
+                            
+                            var temp = []
+                            for (var i = 0; i < newQuotePopup.cart.length; i++) {
+                                temp.push(newQuotePopup.cart[i])
+                            }
+                            newQuotePopup.cart = temp
+                            newQuotePopup.recalc()
+                        }
+                        changeQtyDialog.close()
+                    }
                 }
-                newQuotePopup.cart = temp
-                newQuotePopup.recalc()
+
+                Button {
+                    height: 32
+                    width: 90
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: changeQtyDialog.close()
+                }
             }
         }
     }
