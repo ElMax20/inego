@@ -272,13 +272,43 @@ ScrollView {
                     spacing: 10
 
                     Text { text: "Código del Producto:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: npCode; placeholderText: "ej. FER-001"; width: parent.width }
+                    TextField {
+                        id: npCode
+                        placeholderText: "ej. FER-001"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
                     Text { text: "Nombre del Producto:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: npName; placeholderText: "ej. Cuchillas Doble Filo Industrial"; width: parent.width }
+                    TextField {
+                        id: npName
+                        placeholderText: "ej. Cuchillas Doble Filo Industrial"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
                     Text { text: "Descripción del Producto:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: npDesc; placeholderText: "ej. Cuchillas industriales de alta resistencia de acero templado"; width: parent.width }
+                    TextField {
+                        id: npDesc
+                        placeholderText: "ej. Cuchillas industriales de alta resistencia de acero templado"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
                     Text { text: "Categoría de Producto (Incluye Categorías Registradas):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     ComboBox {
@@ -307,8 +337,14 @@ ScrollView {
                         id: npStockMin
                         placeholderText: "ej. 5"
                         width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Stock Inicial (Únicamente Números):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
@@ -316,8 +352,14 @@ ScrollView {
                         id: npStockInit
                         placeholderText: "ej. 50"
                         width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Costo Referencial USD (Únicamente Números / Decimales):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
@@ -325,8 +367,14 @@ ScrollView {
                         id: npPrice
                         placeholderText: "ej. 25.50"
                         width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhFormattedNumbersOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     }
                 }
             }

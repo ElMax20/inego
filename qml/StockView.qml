@@ -237,11 +237,23 @@ ScrollView {
             TextField {
                 id: dispatchQty
                 width: parent.width
+                height: 38
                 placeholderText: "Cantidad a despachar"
                 text: "1"
-                color: theme.textPrimary
+                color: "#FFFFFF"
+                font.bold: true
+                font.pixelSize: 13
+                horizontalAlignment: Text.AlignHCenter
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
+                background: Rectangle {
+                    color: theme.bgMain
+                    radius: 6
+                    border.color: theme.colorBronze
+                    border.width: 1.5
+                }
             }
 
             Row {
@@ -320,11 +332,21 @@ ScrollView {
             TextField {
                 id: renewQty
                 width: parent.width
+                height: 38
                 placeholderText: "Cantidad (ej. 20)"
                 text: "10"
-                color: theme.textPrimary
+                color: "#FFFFFF"
+                font.bold: true
+                font.pixelSize: 13
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
+                background: Rectangle {
+                    color: theme.bgMain
+                    radius: 6
+                    border.color: theme.borderColor
+                }
             }
 
             Row {

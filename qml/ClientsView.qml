@@ -228,8 +228,13 @@ ScrollView {
                         id: cliRuc
                         placeholderText: "ej. 0991234567001 o 0912345678"
                         width: parent.width
-                        color: theme.textPrimary
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                         onTextChanged: {
                             var r = text.trim();
                             if (r.length >= 2) {
@@ -255,7 +260,9 @@ ScrollView {
                         id: cliProvincia
                         placeholderText: "Se autodetecta según los dos primeros dígitos"
                         width: parent.width
-                        color: theme.textPrimary
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
                         readOnly: true
                         background: Rectangle {
                             color: theme.bgMain
@@ -265,23 +272,58 @@ ScrollView {
                     }
 
                     Text { text: "Nombre Completo / Razón Social del Cliente:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: cliName; placeholderText: "ej. Inego Industrias S.A."; width: parent.width; color: theme.textPrimary }
+                    TextField {
+                        id: cliName
+                        placeholderText: "ej. Inego Industrias S.A."
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
                     Text { text: "Correo Electrónico (Requerido: @gmail.com, @hotmail.com, empresarial, etc.):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: cliEmail; placeholderText: "ej. contacto@gmail.com"; width: parent.width; color: theme.textPrimary }
+                    TextField {
+                        id: cliEmail
+                        placeholderText: "ej. contacto@gmail.com"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
-                    Text { text: "Número de Teléfono / WhatsApp (Únicamente 9 dígitos numéricos):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    Text { text: "Número de Teléfono / WhatsApp (9 o 10 dígitos numéricos):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: cliPhone
                         placeholderText: "ej. 091234567"
                         width: parent.width
-                        color: theme.textPrimary
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
-                        validator: RegularExpressionValidator { regularExpression: /^[0-9]{9}$/ }
+                        validator: RegularExpressionValidator { regularExpression: /^[0-9]{9,10}$/ }
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Dirección del Cliente (Opcional):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: cliAddress; placeholderText: "ej. Av. Carlos Julio Arosemena Km 2.5"; width: parent.width; color: theme.textPrimary }
+                    TextField {
+                        id: cliAddress
+                        placeholderText: "ej. Av. Carlos Julio Arosemena Km 2.5"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
                 }
             }
 

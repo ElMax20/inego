@@ -228,7 +228,12 @@ ScrollView {
                         id: expConcept
                         placeholderText: "Concepto (ej. Pago planilla de agua o Compra repuestos)"
                         width: parent.width
-                        color: theme.textPrimary
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Monto USD ($):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
@@ -236,7 +241,12 @@ ScrollView {
                         id: expMonto
                         placeholderText: "Monto USD ($)"
                         width: parent.width
-                        color: theme.textPrimary
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     }
                 }
             }
@@ -321,7 +331,12 @@ ScrollView {
                 id: txtNewCategoryName
                 width: parent.width
                 placeholderText: "ej. Alimentación, Publicidad..."
-                color: theme.textPrimary
+                color: "#FFFFFF"
+                font.bold: true
+                font.pixelSize: 12
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
+                background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
             }
 
             Row {

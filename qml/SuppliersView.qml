@@ -270,7 +270,17 @@ ScrollView {
                     }
 
                     Text { text: "Razón Social del Proveedor:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: supName; placeholderText: "ej. Ferretería Industrial Guayaquil S.A."; width: parent.width }
+                    TextField {
+                        id: supName
+                        placeholderText: "ej. Ferretería Industrial Guayaquil S.A."
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
                     Text { text: "Categoría / Tipo de Producto del Proveedor (Incluye Opción de Nueva Categoría):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     ComboBox {
@@ -285,22 +295,58 @@ ScrollView {
                     }
 
                     Text { text: "Nombre del Contacto Principal:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: supContactName; placeholderText: "ej. Ing. Carlos Mendoza"; width: parent.width }
+                    TextField {
+                        id: supContactName
+                        placeholderText: "ej. Ing. Carlos Mendoza"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
-                    Text { text: "Teléfono / WhatsApp del Contacto (Únicamente 10 dígitos numéricos):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    Text { text: "Teléfono / WhatsApp del Contacto (9 o 10 dígitos numéricos):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: supContactPhone
-                        placeholderText: "ej. 0991234567"
+                        placeholderText: "ej. 0991234567 o 042123456"
                         width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
-                        validator: RegularExpressionValidator { regularExpression: /^[0-9]{10}$/ }
+                        validator: RegularExpressionValidator { regularExpression: /^[0-9]{9,10}$/ }
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Dirección del Proveedor:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: supAddress; placeholderText: "ej. Av. Francisco de Orellana y Vía Samborondón"; width: parent.width }
+                    TextField {
+                        id: supAddress
+                        placeholderText: "ej. Av. Francisco de Orellana y Vía Samborondón"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
                     Text { text: "Correo Electrónico (Requerido: @gmail.com, @hotmail.com, @outlook.com, etc.):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField { id: supEmail; placeholderText: "ej. ventas@gmail.com"; width: parent.width }
+                    TextField {
+                        id: supEmail
+                        placeholderText: "ej. ventas@gmail.com"
+                        width: parent.width
+                        color: "#FFFFFF"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    }
 
                     Text { text: "Origen / Clasificación de Ubicación:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     ComboBox {

@@ -104,7 +104,11 @@ Rectangle {
                 height: 42
                 placeholderText: "Ingrese su usuario corporativo..."
                 text: ""
-                color: theme.textPrimary
+                color: "#FFFFFF"
+                font.bold: true
+                font.pixelSize: 13
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
                 onAccepted: loginRoot.doLogin()
                 background: Rectangle {
                     color: theme.bgMain
@@ -128,7 +132,11 @@ Rectangle {
                 echoMode: TextInput.Password
                 placeholderText: "••••••••"
                 text: ""
-                color: theme.textPrimary
+                color: "#FFFFFF"
+                font.bold: true
+                font.pixelSize: 13
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
                 onAccepted: loginRoot.doLogin()
                 background: Rectangle {
                     color: theme.bgMain
