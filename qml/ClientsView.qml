@@ -339,23 +339,39 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO DE ERROR DEL CLIENTE
+    // DIÁLOGO DE ERROR DEL CLIENTE (SOBRE OVERLAY CON ALTO CONTRASTE Y MÁXIMA LEGIBILIDAD)
     Dialog {
         id: cliErrDialog
-        title: "Error de Validación"
+        parent: Overlay.overlay
+        title: "Registro de Cliente"
         anchors.centerIn: parent
         modal: true
-        width: 320
-        standardButtons: Dialog.Close
-        
-        Text {
-            id: cliErrTxt
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#EF4444"
-            font.bold: true
-            font.pixelSize: 11
+        width: 420
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
         }
+
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                id: cliErrTxt
+                text: ""
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.bold: true
+                wrapMode: Text.WordWrap
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+
+        standardButtons: Dialog.Ok
     }
 
     // DIÁLOGO HISTORIAL COMERCIAL POR CLIENTE ESTILO CORPORATIVO Y ARRASTRABLE (RF3.4)

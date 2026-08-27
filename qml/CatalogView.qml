@@ -400,21 +400,28 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO SECUNDARIO PARA AGREGAR NUEVA CATEGORÍA (SOBRE OVERLAY)
+    // DIÁLOGO SECUNDARIO PARA AGREGAR NUEVA CATEGORÍA (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: newCategoryDialog
         parent: Overlay.overlay
         title: "Agregar Nueva Categoría"
         anchors.centerIn: parent
         modal: true
-        width: 360
+        width: 400
 
-        Column {
-            spacing: 10
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
 
-            Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 12; color: theme.textPrimary }
-            TextField { id: newCatName; placeholderText: "ej. Insumos Médicos / Químicos"; width: parent.width }
+        contentItem: Column {
+            spacing: 12
+            width: parent.width - 24
+
+            Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+            TextField { id: newCatName; placeholderText: "ej. Insumos Médicos / Químicos"; width: parent.width; color: theme.textPrimary }
         }
 
         standardButtons: Dialog.Ok | Dialog.Cancel
@@ -426,42 +433,70 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO MENSAJE DE ERROR/ALERTA EN CATÁLOGO (SOBRE OVERLAY)
+    // DIÁLOGO MENSAJE DE ERROR/ALERTA EN CATÁLOGO (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: catErrDialog
         parent: Overlay.overlay
         title: "Creación de Producto"
         anchors.centerIn: parent
         modal: true
-        width: 360
+        width: 420
 
-        Text {
-            id: catErrTxt
-            text: ""
-            color: theme.textPrimary
-            font.pixelSize: 12
-            wrapMode: Text.WordWrap
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                id: catErrTxt
+                text: ""
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.bold: true
+                wrapMode: Text.WordWrap
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         standardButtons: Dialog.Ok
     }
 
-    // DIÁLOGO CONFIRMACIÓN ELIMINAR (SOBRE OVERLAY)
+    // DIÁLOGO CONFIRMACIÓN ELIMINAR (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: confirmDeleteDialog
         parent: Overlay.overlay
         title: "Confirmar Eliminación"
         anchors.centerIn: parent
         modal: true
-        width: 380
+        width: 420
 
-        Text {
-            text: catRoot.selectedProduct ? "¿Está seguro que desea eliminar el producto '" + catRoot.selectedProduct.nombre + "' del catálogo?\nEsta acción no se puede deshacer." : ""
-            color: theme.textPrimary
-            font.pixelSize: 12
-            wrapMode: Text.WordWrap
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                text: catRoot.selectedProduct ? "¿Está seguro que desea eliminar el producto '" + catRoot.selectedProduct.nombre + "' del catálogo?\nEsta acción no se puede deshacer." : ""
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.bold: true
+                wrapMode: Text.WordWrap
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         standardButtons: Dialog.Yes | Dialog.No
@@ -473,35 +508,43 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO ENLAZAR PROVEEDOR (SOBRE OVERLAY)
+    // DIÁLOGO ENLAZAR PROVEEDOR (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: linkProviderDialog
         parent: Overlay.overlay
         title: "Enlazar Producto con otro Proveedor"
         anchors.centerIn: parent
         modal: true
-        width: 380
+        width: 420
 
-        Column {
-            spacing: 10
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Column {
+            spacing: 12
+            width: parent.width - 24
 
             Text {
                 text: "Seleccione el proveedor al que desea enlazar este producto:"
                 color: theme.textPrimary
+                font.bold: true
                 font.pixelSize: 12
             }
 
             ComboBox {
                 id: providerCombo
                 width: parent.width
-                model: catRoot.supplierList
+                model: catRoot.suppliersList
             }
         }
 
         standardButtons: Dialog.Ok | Dialog.Cancel
         onAccepted: {
-            if (catRoot.selectedProduct) {
+            if (catRoot.selectedProduct && providerCombo.currentText !== "") {
                 backend.linkProductWithProvider(catRoot.selectedProduct.id, providerCombo.currentText)
                 catRoot.loadData(txtSearch.text)
             }

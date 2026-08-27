@@ -82,19 +82,39 @@ ScrollView {
         }
     }
 
+    // DIÁLOGO CONFIRMACIÓN DESCARGA REPORTE (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: infoDialog
-        title: "Confirmación"
+        parent: Overlay.overlay
+        title: "Confirmación de Descarga"
         anchors.centerIn: parent
         modal: true
+        width: 440
         property alias text: infoTxt.text
 
-        Text {
-            id: infoTxt
-            text: ""
-            color: theme.textPrimary
-            font.pixelSize: 12
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
         }
+
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                id: infoTxt
+                text: ""
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.bold: true
+                wrapMode: Text.WordWrap
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+
         standardButtons: Dialog.Ok
     }
 }

@@ -13,12 +13,12 @@ def validate_email(email):
     return True, ""
 
 def validate_phone(phone):
-    """ Valida que el teléfono contenga únicamente números enteros y tenga exactamente 9 dígitos """
+    """ Valida que el teléfono contenga únicamente dígitos numéricos y tenga 9 o 10 dígitos """
     if not phone:
         return False, "El número de teléfono es obligatorio."
     phone_clean = phone.strip()
-    if not (len(phone_clean) == 9 and phone_clean.isdigit()):
-        return False, "🚫 Teléfono no válido: El número de teléfono del contacto debe contener exactamente 9 dígitos numéricos (ej. 091234567)."
+    if not (len(phone_clean) in (9, 10) and phone_clean.isdigit()):
+        return False, "🚫 Teléfono no válido: El número de teléfono debe contener entre 9 y 10 dígitos numéricos (ej. 0991234567 o 042123456)."
     return True, ""
 
 def validate_cedula(cedula):

@@ -189,29 +189,37 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO DESPACHAR STOCK (SOBRE OVERLAY)
+    // DIÁLOGO DESPACHAR STOCK (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: dispatchDialog
         parent: Overlay.overlay
         title: "📦 Despachar Unidades de Stock"
         anchors.centerIn: parent
         modal: true
-        width: 380
+        width: 420
 
-        Column {
-            spacing: 10
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Column {
+            spacing: 12
+            width: parent.width - 24
 
             Text {
                 text: stockRoot.selectedProduct ? "Stock disponible actual: " + stockRoot.selectedProduct.stock_actual + " unidades" : ""
                 font.bold: true
                 color: theme.colorBronze
-                font.pixelSize: 12
+                font.pixelSize: 13
             }
 
             Text {
                 text: "Ingrese la cantidad de unidades que desea despachar:"
                 color: theme.textPrimary
+                font.bold: true
                 font.pixelSize: 12
             }
 
@@ -220,6 +228,7 @@ ScrollView {
                 width: parent.width
                 placeholderText: "Cantidad a despachar"
                 text: "1"
+                color: theme.textPrimary
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
             }
@@ -240,22 +249,30 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO RENOVAR STOCK (SOBRE OVERLAY)
+    // DIÁLOGO RENOVAR STOCK (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: renewDialog
         parent: Overlay.overlay
         title: "🔄 Renovar y Reordenar Stock"
         anchors.centerIn: parent
         modal: true
-        width: 360
+        width: 420
 
-        Column {
-            spacing: 10
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Column {
+            spacing: 12
+            width: parent.width - 24
 
             Text {
                 text: "Ingrese la cantidad de unidades para renovación / re-stock:"
                 color: theme.textPrimary
+                font.bold: true
                 font.pixelSize: 12
             }
 
@@ -264,6 +281,7 @@ ScrollView {
                 width: parent.width
                 placeholderText: "Cantidad (ej. 20)"
                 text: "10"
+                color: theme.textPrimary
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
             }
@@ -279,22 +297,36 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO MODAL AVISO / ERROR CUANDO SE INTENTA DESPACHAR MÁS DE LO DISPONIBLE (SOBRE OVERLAY)
+    // DIÁLOGO MODAL AVISO / ERROR CUANDO SE INTENTA DESPACHAR MÁS DE LO DISPONIBLE (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: stockErrDialog
         parent: Overlay.overlay
         title: "Control de Despacho de Stock"
         anchors.centerIn: parent
         modal: true
-        width: 360
+        width: 420
 
-        Text {
-            id: stockErrTxt
-            text: ""
-            color: theme.textPrimary
-            font.pixelSize: 12
-            wrapMode: Text.WordWrap
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                id: stockErrTxt
+                text: ""
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.bold: true
+                wrapMode: Text.WordWrap
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         standardButtons: Dialog.Ok

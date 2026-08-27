@@ -381,21 +381,28 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO SECUNDARIO PARA AGREGAR NUEVA CATEGORÍA EN PROVEEDORES (SOBRE OVERLAY)
+    // DIÁLOGO SECUNDARIO PARA AGREGAR NUEVA CATEGORÍA EN PROVEEDORES (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: newCategoryDialog
         parent: Overlay.overlay
         title: "Agregar Nueva Categoría"
         anchors.centerIn: parent
         modal: true
-        width: 360
+        width: 400
 
-        Column {
-            spacing: 10
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
 
-            Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 12; color: theme.textPrimary }
-            TextField { id: newCatName; placeholderText: "ej. Insumos Químicos / Embalaje"; width: parent.width }
+        contentItem: Column {
+            spacing: 12
+            width: parent.width - 24
+
+            Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+            TextField { id: newCatName; placeholderText: "ej. Insumos Químicos / Embalaje"; width: parent.width; color: theme.textPrimary }
         }
 
         standardButtons: Dialog.Ok | Dialog.Cancel
@@ -407,22 +414,36 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO MODAL AVISO DE ERROR/VALIDACIÓN (SOBRE OVERLAY)
+    // DIÁLOGO MODAL AVISO DE ERROR/VALIDACIÓN (SOBRE OVERLAY CON ALTO CONTRASTE Y MÁXIMA LEGIBILIDAD)
     Dialog {
         id: supErrDialog
         parent: Overlay.overlay
         title: "Registro de Proveedor"
         anchors.centerIn: parent
         modal: true
-        width: 380
+        width: 420
 
-        Text {
-            id: supErrTxt
-            text: ""
-            color: theme.textPrimary
-            font.pixelSize: 12
-            wrapMode: Text.WordWrap
-            width: parent.width
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                id: supErrTxt
+                text: ""
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.bold: true
+                wrapMode: Text.WordWrap
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
         standardButtons: Dialog.Ok

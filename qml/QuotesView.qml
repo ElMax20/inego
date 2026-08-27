@@ -609,24 +609,41 @@ ScrollView {
     }
 
     // DIÁLOGOS DE CONFIRMACIÓN Y CAMBIO DE CANTIDAD PARA PRODUCTOS DUPLICADOS
+    // DIÁLOGOS DE CONFIRMACIÓN Y CAMBIO DE CANTIDAD PARA PRODUCTOS DUPLICADOS (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: duplicateConfirmDialog
+        parent: Overlay.overlay
         title: "Producto Duplicado"
         anchors.centerIn: parent
         modal: true
-        width: 360
-        standardButtons: Dialog.Yes | Dialog.No
+        width: 420
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
 
         property var dupItem: null
         property int dupIndex: -1
 
-        Text {
-            width: parent.width
-            wrapMode: Text.Wrap
-            text: "Este objeto ya está en la cotización, ¿Desea cambiar la cantidad?"
-            color: theme.textPrimary
-            font.pixelSize: 12
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "Este objeto ya está en la cotización, ¿Desea cambiar la cantidad?"
+                color: theme.textPrimary
+                font.bold: true
+                font.pixelSize: 13
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
+
+        standardButtons: Dialog.Yes | Dialog.No
 
         onAccepted: {
             changeQtyDialog.openForItem(dupItem, dupIndex)
@@ -635,11 +652,18 @@ ScrollView {
 
     Dialog {
         id: changeQtyDialog
+        parent: Overlay.overlay
         title: "Modificar Cantidad"
         anchors.centerIn: parent
         modal: true
-        width: 360
-        standardButtons: Dialog.Save | Dialog.Cancel
+        width: 420
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
 
         property var targetItem: null
         property int targetIndex: -1
@@ -651,14 +675,14 @@ ScrollView {
             open()
         }
 
-        Column {
-            width: parent.width
+        contentItem: Column {
+            width: parent.width - 24
             spacing: 12
 
             Text {
                 text: "Objeto: " + (changeQtyDialog.targetItem ? changeQtyDialog.targetItem.nombre : "")
                 font.bold: true
-                font.pixelSize: 12
+                font.pixelSize: 13
                 color: theme.textPrimary
                 wrapMode: Text.Wrap
                 width: parent.width
@@ -667,13 +691,14 @@ ScrollView {
             Text {
                 text: "Cantidad Actual: " + (changeQtyDialog.targetItem ? changeQtyDialog.targetItem.cantidad : "0")
                 font.pixelSize: 11
-                color: theme.textSecondary
+                color: theme.textMuted
             }
 
-            Label {
+            Text {
                 text: "Ingrese la nueva cantidad:"
                 font.pixelSize: 11
-                color: theme.textMuted
+                font.bold: true
+                color: theme.textPrimary
             }
 
             TextField {
@@ -684,6 +709,8 @@ ScrollView {
                 inputMethodHints: Qt.ImhDigitsOnly
             }
         }
+
+        standardButtons: Dialog.Save | Dialog.Cancel
 
         onAccepted: {
             var newQty = parseInt(txtNewQtyVal.text) || 1

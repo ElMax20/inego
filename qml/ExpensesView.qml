@@ -291,20 +291,27 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO AGREGAR NUEVA CATEGORÍA DINÁMICAMENTE
+    // DIÁLOGO AGREGAR NUEVA CATEGORÍA DINÁMICAMENTE (SOBRE OVERLAY CON ALTO CONTRASTE)
     Dialog {
         id: newCategoryDialog
+        parent: Overlay.overlay
         title: "Nueva Categoría"
         anchors.centerIn: parent
         modal: true
-        width: 340
-        standardButtons: Dialog.Ok | Dialog.Cancel
+        width: 400
 
-        Column {
-            width: parent.width
-            spacing: 8
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
 
-            Label { text: "Ingrese el nombre del nuevo rubro/categoría:"; color: theme.textSecondary }
+        contentItem: Column {
+            width: parent.width - 24
+            spacing: 10
+
+            Text { text: "Ingrese el nombre del nuevo rubro/categoría:"; font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
             TextField {
                 id: txtNewCategoryName
                 width: parent.width
@@ -313,6 +320,7 @@ ScrollView {
             }
         }
 
+        standardButtons: Dialog.Ok | Dialog.Cancel
         onAccepted: {
             if (txtNewCategoryName.text.trim() !== "") {
                 categoryModel.insert(categoryModel.count - 1, {"text": txtNewCategoryName.text.trim()})
@@ -329,22 +337,38 @@ ScrollView {
         }
     }
 
-    // DIÁLOGO DE ERROR DE REGISTRO
+    // DIÁLOGO DE ERROR DE REGISTRO (SOBRE OVERLAY CON ALTO CONTRASTE Y MÁXIMA LEGIBILIDAD)
     Dialog {
         id: expErrDialog
-        title: "Error de Registro"
+        parent: Overlay.overlay
+        title: "Registro de Gasto"
         anchors.centerIn: parent
         modal: true
-        width: 320
-        standardButtons: Dialog.Close
-        
-        Text {
-            id: expErrTxt
-            width: parent.width
-            wrapMode: Text.Wrap
-            color: "#EF4444"
-            font.bold: true
-            font.pixelSize: 11
+        width: 420
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
         }
+
+        contentItem: Column {
+            spacing: 14
+            width: parent.width - 24
+
+            Text {
+                id: expErrTxt
+                text: ""
+                color: theme.textPrimary
+                font.pixelSize: 13
+                font.bold: true
+                wrapMode: Text.WordWrap
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+
+        standardButtons: Dialog.Ok
     }
 }
