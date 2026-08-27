@@ -366,8 +366,13 @@ ScrollView {
                                         width: 70
                                         height: 32
                                         text: "1"
-                                        color: theme.textPrimary
+                                        color: theme.isDark ? "#000000" : "#0F172A"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        selectionColor: theme.colorBronze
+                                        selectedTextColor: "#FFFFFF"
                                         inputMethodHints: Qt.ImhDigitsOnly
+                                        background: Rectangle { color: "#FFFFFF"; radius: 6; border.color: theme.borderColor }
                                     }
                                 }
 
@@ -379,8 +384,13 @@ ScrollView {
                                         width: 80
                                         height: 32
                                         text: "30"
-                                        color: theme.textPrimary
+                                        color: theme.isDark ? "#000000" : "#0F172A"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        selectionColor: theme.colorBronze
+                                        selectedTextColor: "#FFFFFF"
                                         inputMethodHints: Qt.ImhDigitsOnly
+                                        background: Rectangle { color: "#FFFFFF"; radius: 6; border.color: theme.borderColor }
                                     }
                                 }
 
