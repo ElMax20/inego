@@ -1,28 +1,24 @@
 import re
 
 def validate_email(email):
-    """ Valida que el correo sea de dominios populares conocidos (@gmail.com, @hotmail.com, @outlook.com, @yahoo.com, @live.com, @icloud.com, @inego.com) """
+    """ Valida que el correo electrónico siga la estructura universal: usuario@dominio.extension """
     if not email or not isinstance(email, str):
         return False, "El correo electrónico es obligatorio."
     
     email_clean = email.strip().lower()
-    allowed_domains = ("@gmail.com", "@hotmail.com", "@outlook.com", "@yahoo.com", "@live.com", "@icloud.com", "@inego.com", "@gmail.es", "@hotmail.es")
-    
-    if not any(email_clean.endswith(domain) for domain in allowed_domains):
-        return False, "🚫 Correo electrónico no permitido: Debe utilizar un dominio conocido (@gmail.com, @hotmail.com, @outlook.com, @yahoo.com, @live.com, @icloud.com, @inego.com)."
-    
-    if not re.match(r"^[^@]+@[^@]+\.[^@]+$", email_clean):
-        return False, "Formato de correo electrónico inválido."
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    if not re.match(pattern, email_clean):
+        return False, "🚫 Formato de correo electrónico inválido: Debe cumplir con la estructura universal (ej. usuario@dominio.com)."
         
     return True, ""
 
 def validate_phone(phone):
-    """ Valida que el teléfono contenga exactamente 10 dígitos numéricos """
+    """ Valida que el teléfono contenga únicamente números enteros y tenga exactamente 9 dígitos """
     if not phone:
         return False, "El número de teléfono es obligatorio."
     phone_clean = phone.strip()
-    if not (len(phone_clean) == 10 and phone_clean.isdigit()):
-        return False, "🚫 Teléfono no válido: El número de teléfono del contacto debe contener exactamente 10 dígitos numéricos (ej. 0991234567)."
+    if not (len(phone_clean) == 9 and phone_clean.isdigit()):
+        return False, "🚫 Teléfono no válido: El número de teléfono del contacto debe contener exactamente 9 dígitos numéricos (ej. 091234567)."
     return True, ""
 
 def validate_cedula(cedula):

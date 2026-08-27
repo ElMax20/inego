@@ -170,6 +170,11 @@ class DatabaseManager:
                 );
                 """)
 
+                try:
+                    cursor.execute("ALTER TABLE clientes ADD COLUMN provincia_pais TEXT DEFAULT 'Guayas'")
+                except Exception:
+                    pass
+
                 cursor.execute("""
                 CREATE TABLE IF NOT EXISTS cotizaciones (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

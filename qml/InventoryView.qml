@@ -24,10 +24,13 @@ ScrollView {
         Item { height: 10; width: 1 }
 
         // Header Catálogo y Botón Agregar Producto Nuevo
-        Row {
+        Item {
             width: parent.width
+            height: 40
 
             Text {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
                 text: "📦 Catálogo de Productos y Control de Stock Ejemplar"
                 font.pixelSize: 15
                 font.bold: true
@@ -36,6 +39,7 @@ ScrollView {
 
             Rectangle {
                 anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
                 height: 36
                 width: 190
                 radius: 8

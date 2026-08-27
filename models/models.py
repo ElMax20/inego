@@ -149,13 +149,13 @@ class ClientModel:
         return db.fetch_all("SELECT * FROM clientes ORDER BY id DESC")
 
     @staticmethod
-    def create(tipo_cliente, razon_social_nombre, ruc_cedula, telefono, email, direccion):
+    def create(tipo_cliente, razon_social_nombre, ruc_cedula, telefono, email, direccion, provincia_pais="Guayas"):
         dias_credito = 72 if tipo_cliente == 'B2B' else 0
         query = """
-            INSERT INTO clientes (tipo_cliente, razon_social_nombre, ruc_cedula, telefono, email, direccion, dias_credito)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO clientes (tipo_cliente, razon_social_nombre, ruc_cedula, telefono, email, direccion, dias_credito, provincia_pais)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
-        return db.execute_query(query, (tipo_cliente, razon_social_nombre, ruc_cedula, telefono, email, direccion, dias_credito))
+        return db.execute_query(query, (tipo_cliente, razon_social_nombre, ruc_cedula, telefono, email, direccion, dias_credito, provincia_pais))
 
     @staticmethod
     def get_quotes_history(cliente_id):

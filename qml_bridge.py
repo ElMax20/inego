@@ -99,8 +99,6 @@ class BackendBridge(QObject):
 
         result = []
         for p in prods:
-            if search_val and (search_val not in p["nombre"].lower() and search_val not in p["codigo"].lower()):
-                continue
             raw_cat = p["categoria"] if "categoria" in p.keys() and p["categoria"] else "General"
             raw_desc = p.get("descripcion") or "Sin descripción"
             raw_name = p["nombre"]
@@ -123,6 +121,17 @@ class BackendBridge(QObject):
 
             # Limpiar corchetes del nombre del producto si existen
             clean_name = raw_name.replace("[Proveedor: ", "- Proveedor: ").replace("[", "").replace("]", "").strip()
+
+            # Realizar búsqueda sobre los campos del producto (RF2.7)
+            if search_val:
+                search_match = (
+                    search_val in clean_name.lower() or 
+                    search_val in p["codigo"].lower() or 
+                    search_val in cat.lower() or 
+                    search_val in raw_desc.lower()
+                )
+                if not search_match:
+                    continue
 
             is_linked = "(Enlazado)" in cat or "-LNK" in p["codigo"] or "LNK-" in p["codigo"]
             fecha_act = str(p.get("fecha_registro") or "2026-08-20")[:10]
@@ -387,38 +396,59 @@ class BackendBridge(QObject):
             })
         return json.dumps(result)
 
-    @Slot(str, str, str, str, str, str, int, result=str)
-    def addClient(self, razon_social_nombre, tipo_cliente, ruc_cedula, telefono, email, direccion, dias_credito):
+    @Slot(str, str, str, str, str, str, int, str, result=str)
+    def addClient(self, razon_social_nombre, tipo_cliente, ruc_cedula, telefono, email, direccion, dias_credito, provincia_pais):
         if not razon_social_nombre or not ruc_cedula or not telefono:
-            return json.dumps({"success": False, "message": "Complete los datos obligatorios del cliente."})
+            return json.dumps({"success": False, "message": "⚠️ Complete los datos obligatorios del cliente."})
 
         rc_clean = ruc_cedula.strip()
-        ok_rc, msg_rc = validate_ruc(rc_clean) if len(rc_clean) == 13 else validate_cedula(rc_clean)
-        if not ok_rc:
-            return json.dumps({"success": False, "message": msg_rc})
+        if not rc_clean.isdigit():
+            return json.dumps({"success": False, "message": "⚠️ Cédula/RUC no válida: Debe contener únicamente dígitos numéricos."})
+        
+        if len(rc_clean) < 10 or len(rc_clean) > 13:
+            return json.dumps({"success": False, "message": "⚠️ Cédula/RUC no válida: Debe contener entre 10 y 13 dígitos numéricos."})
+
+        prov_code = rc_clean[:2]
+        valid_codes = [f"{i:02d}" for i in range(1, 25)] + ["30"]
+        if prov_code not in valid_codes:
+            return json.dumps({"success": False, "message": "⚠️ Cédula/RUC no válida: Los dos primeros dígitos deben corresponder a un código de provincia válido (01 al 24) o extranjero (30)."})
+
+        # Validar teléfono (Exactamente 9 dígitos numéricos)
+        tel_clean = telefono.strip()
+        if not (len(tel_clean) == 9 and tel_clean.isdigit()):
+            return json.dumps({"success": False, "message": "⚠️ Número de teléfono no válido: Debe contener exactamente 9 dígitos numéricos."})
+
+        # Validar correo
+        if email and email.strip() != "N/A":
+            ok_e, msg_e = validate_email(email)
+            if not ok_e:
+                return json.dumps({"success": False, "message": msg_e})
 
         try:
             ClientModel.create(
-                tipo_cliente if tipo_cliente else "B2B",
-                razon_social_nombre.strip(), ruc_cedula.strip(),
-                telefono.strip(), email.strip() if email else "N/A",
-                direccion.strip() if direccion else "Guayaquil"
+                tipo_cliente if tipo_cliente else "B2C",
+                razon_social_nombre.strip(), rc_clean,
+                tel_clean, email.strip() if email else "N/A",
+                direccion.strip() if direccion else "Guayaquil",
+                provincia_pais if provincia_pais else "Guayas"
             )
             if self._current_user:
-                AuditLogModel.log(self._current_user['nombre_completo'], "Registro de Cliente", f"Registró cliente: {razon_social_nombre} ({tipo_cliente})")
+                AuditLogModel.log(self._current_user['nombre_completo'], "Registro de Cliente", f"Registró cliente: {razon_social_nombre} ({tipo_cliente}) de {provincia_pais}")
             return json.dumps({"success": True, "message": f"Cliente '{razon_social_nombre}' registrado exitosamente."})
         except Exception as e:
             return json.dumps({"success": False, "message": f"Error al registrar cliente: {str(e)}"})
 
     @Slot(result=str)
     def getQuotesData(self):
-        quotes = db.fetch_all("SELECT q.*, c.razon_social_nombre as cliente_nombre FROM cotizaciones q LEFT JOIN clientes c ON q.cliente_id = c.id ORDER BY q.id DESC")
+        quotes = db.fetch_all("SELECT q.*, c.razon_social_nombre as cliente_nombre, c.email as cliente_correo, c.telefono as cliente_telefono FROM cotizaciones q LEFT JOIN clientes c ON q.cliente_id = c.id ORDER BY q.id DESC")
         result = []
         for q in quotes:
             result.append({
                 "id": q["id"],
                 "numero_cotizacion": q["numero_cotizacion"],
                 "cliente_nombre": q["cliente_nombre"] or "Cliente General",
+                "cliente_correo": q["cliente_correo"] or "N/A",
+                "cliente_telefono": q["cliente_telefono"] or "N/A",
                 "fecha_emision": q["fecha_emision"],
                 "subtotal": float(q["subtotal"] or 0.0),
                 "total": float(q["total"] or 0.0),
@@ -427,6 +457,129 @@ class BackendBridge(QObject):
             })
         return json.dumps(result)
 
+    @Slot(int, result=str)
+    def getClientQuotes(self, client_id):
+        """ RF3.4 — Historial Comercial por Cliente """
+        quotes = db.fetch_all("""
+            SELECT q.*, c.razon_social_nombre as cliente_nombre, c.email as cliente_correo, c.telefono as cliente_telefono 
+            FROM cotizaciones q 
+            LEFT JOIN clientes c ON q.cliente_id = c.id 
+            WHERE q.cliente_id = %s 
+            ORDER BY q.id DESC
+        """, (client_id,))
+        result = []
+        for q in quotes:
+            result.append({
+                "id": q["id"],
+                "numero_cotizacion": q["numero_cotizacion"],
+                "cliente_nombre": q["cliente_nombre"] or "Cliente General",
+                "cliente_correo": q["cliente_correo"] or "N/A",
+                "cliente_telefono": q["cliente_telefono"] or "N/A",
+                "fecha_emision": str(q["fecha_emision"]),
+                "subtotal": float(q["subtotal"] or 0.0),
+                "total": float(q["total"] or 0.0),
+                "estado": q["estado"],
+                "es_credito_72dias": bool(q["es_credito_72dias"])
+            })
+        return json.dumps(result)
+
+    @Slot(int, str, float, float, float, str, result=str)
+    def createQuote(self, cliente_id, es_b2b_str, subtotal, iva, total, items_json):
+        """ RF3.3 — Creador de Cotizaciones Express """
+        try:
+            from datetime import datetime, timedelta
+            es_b2b = es_b2b_str == "B2B"
+            dias = 72 if es_b2b else 15
+            fecha_emision = datetime.now().strftime("%Y-%m-%d")
+            fecha_venc = (datetime.now() + timedelta(days=dias)).strftime("%Y-%m-%d")
+            numero_cot = f"COT-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+            query_cot = """
+                INSERT INTO cotizaciones (numero_cotizacion, cliente_id, fecha_emision, fecha_vencimiento, es_credito_72dias, estado, subtotal, iva, total)
+                VALUES (%s, %s, %s, %s, %s, 'Pendiente', %s, %s, %s)
+            """
+            cot_id = db.execute_query(query_cot, (
+                numero_cot, cliente_id, fecha_emision, fecha_venc, 
+                1 if es_b2b else 0, subtotal, iva, total
+            ))
+
+            items = json.loads(items_json)
+            for item in items:
+                sub_linea = float(item['cantidad']) * float(item['precio_venta'])
+                query_det = """
+                    INSERT INTO cotizacion_detalles (cotizacion_id, producto_id, cantidad, precio_costo_unitario, precio_venta_unitario, subtotal_linea)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                db.execute_query(query_det, (
+                    cot_id, item['producto_id'], item['cantidad'], 
+                    item.get('precio_costo', 0.0), item['precio_venta'], sub_linea
+                ))
+
+            if self._current_user:
+                AuditLogModel.log(
+                    self._current_user['nombre_completo'], 
+                    "Creación de Cotización", 
+                    f"Creó cotización express N° {numero_cot} por un total de ${total:,.2f} USD"
+                )
+
+            return json.dumps({"success": True, "message": f"Cotización '{numero_cot}' creada con éxito.", "quote_id": cot_id})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al guardar cotización: {str(e)}"})
+
+    @Slot(int, result=str)
+    def convertQuoteToOrder(self, quote_id):
+        """ RF3.6 — Conversión a Venta """
+        try:
+            from models.models import QuoteModel
+            # Reutilizamos la lógica del modelo de negocio
+            # En la versión QML forzamos primero a "Aprobada" si estaba en otro estado para asegurar la conversión
+            db.execute_query("UPDATE cotizaciones SET estado = 'Aprobada' WHERE id = %s", (quote_id,))
+            numero_orden = QuoteModel.convert_to_sales_order(quote_id)
+            if not numero_orden:
+                return json.dumps({"success": False, "message": "No se pudo convertir la cotización a orden de venta."})
+            
+            return json.dumps({"success": True, "message": f"Cotización convertida con éxito. Orden de Venta {numero_orden} generada."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al convertir cotización: {str(e)}"})
+
+    @Slot(int, result=str)
+    def generateAndOpenQuotePDF(self, quote_id):
+        """ RF3.5 — Exportación Ágil a PDF """
+        try:
+            from utils.pdf_generator import generate_quote_pdf
+            fpath = generate_quote_pdf(quote_id)
+            if fpath and os.path.exists(fpath):
+                # Abrir archivo PDF en el visor predeterminado del sistema
+                os.startfile(fpath)
+                return json.dumps({"success": True, "file": os.path.basename(fpath)})
+            return json.dumps({"success": False, "message": "No se pudo generar el archivo PDF."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al generar PDF: {str(e)}"})
+
+    @Slot(int, result=str)
+    def prepareQuoteSharing(self, quote_id):
+        """ Genera el PDF de la cotización y lo copia al portapapeles para pegar con Ctrl+V """
+        try:
+            from utils.pdf_generator import generate_quote_pdf
+            from PySide6.QtGui import QGuiApplication
+            from PySide6.QtCore import QMimeData, QUrl
+            
+            fpath = generate_quote_pdf(quote_id)
+            if fpath and os.path.exists(fpath):
+                clipboard = QGuiApplication.clipboard()
+                mime_data = QMimeData()
+                mime_data.setUrls([QUrl.fromLocalFile(fpath)])
+                clipboard.setMimeData(mime_data)
+                
+                return json.dumps({
+                    "success": True, 
+                    "file_path": fpath, 
+                    "file_name": os.path.basename(fpath)
+                })
+            return json.dumps({"success": False, "message": "No se pudo generar el archivo PDF."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al preparar cotización: {str(e)}"})
+
     @Slot(result=str)
     def getExpensesData(self):
         expenses = db.fetch_all("SELECT * FROM gastos ORDER BY id DESC")
@@ -434,12 +587,32 @@ class BackendBridge(QObject):
         for e in expenses:
             result.append({
                 "id": e["id"],
-                "rubro": e.get("tipo_gasto", "Servicios Operativos"),
+                "rubro": e.get("categoria") or e.get("tipo_gasto") or "Otros",
                 "concepto": e["concepto"],
                 "monto": float(e["monto"] or 0.0),
                 "fecha": e["fecha"]
             })
         return json.dumps(result)
+
+    @Slot(str, str, float, result=str)
+    def addExpense(self, concepto, rubro, monto):
+        if not concepto or not monto:
+            return json.dumps({"success": False, "message": "Por favor llene los datos del gasto."})
+        try:
+            from datetime import datetime
+            fecha_hoy = datetime.now().strftime("%Y-%m-%d")
+            registrado_por = self._current_user['nombre_completo'] if self._current_user else "Socio 1 - Administrador"
+            db.execute_query("""
+                INSERT INTO gastos (fecha, categoria, concepto, monto, metodo_pago, registrado_por)
+                VALUES (%s, %s, %s, %s, 'Caja Chica', %s)
+            """, (fecha_hoy, rubro, concepto, monto, registrado_por))
+            
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Registro de Gasto", f"Registró gasto de caja chica: {concepto} por ${monto:,.2f} USD")
+            
+            return json.dumps({"success": True, "message": "Gasto registrado exitosamente."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al guardar gasto: {str(e)}"})
 
     @Slot(result=str)
     def getPayrollData(self):
