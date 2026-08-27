@@ -9,7 +9,7 @@ sys.path.append(BASE_DIR)
 from database.connection import db
 from models.models import UserModel, SupplierModel, ClientModel, ProductModel, AuditLogModel
 from utils.excel_generator import export_sales_to_excel, export_gantt_chart_to_excel, export_expenses_to_excel
-from utils.validators import validate_email, validate_phone, validate_cedula, validate_ruc, validate_required_fields
+from utils.validators import validate_email, validate_phone, validate_cedula, validate_ruc, validate_cedula_or_ruc, validate_required_fields
 from config import COMPANY_NAME, PARTNER_FIXED_PAY, PARTNER_BONUS_PERCENT
 
 class BackendBridge(QObject):
@@ -402,16 +402,9 @@ class BackendBridge(QObject):
             return json.dumps({"success": False, "message": "⚠️ Complete los datos obligatorios del cliente."})
 
         rc_clean = ruc_cedula.strip()
-        if not rc_clean.isdigit():
-            return json.dumps({"success": False, "message": "⚠️ Cédula/RUC no válida: Debe contener únicamente dígitos numéricos."})
-        
-        if len(rc_clean) < 10 or len(rc_clean) > 13:
-            return json.dumps({"success": False, "message": "⚠️ Cédula/RUC no válida: Debe contener entre 10 y 13 dígitos numéricos."})
-
-        prov_code = rc_clean[:2]
-        valid_codes = [f"{i:02d}" for i in range(1, 25)] + ["30"]
-        if prov_code not in valid_codes:
-            return json.dumps({"success": False, "message": "⚠️ Cédula/RUC no válida: Los dos primeros dígitos deben corresponder a un código de provincia válido (01 al 24) o extranjero (30)."})
+        ok_rc, msg_rc = validate_cedula_or_ruc(rc_clean)
+        if not ok_rc:
+            return json.dumps({"success": False, "message": msg_rc})
 
         # Validar teléfono (Exactamente 9 dígitos numéricos)
         tel_clean = telefono.strip()
