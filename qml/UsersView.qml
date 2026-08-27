@@ -372,40 +372,43 @@ ScrollView {
                     TextField {
                         id: newUname
                         placeholderText: "ej. compras2"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Nombre completo (ej. Ing. Carlos Mendoza):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: newFullName
                         placeholderText: "ej. Ing. Carlos Mendoza"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Contraseña de acceso:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: newPass
                         placeholderText: "Contraseña de acceso"
+                        placeholderTextColor: theme.textMuted
                         echoMode: TextInput.Password
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Perfil / Rol Asignado:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }

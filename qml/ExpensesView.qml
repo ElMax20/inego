@@ -227,26 +227,28 @@ ScrollView {
                     TextField {
                         id: expConcept
                         placeholderText: "Concepto (ej. Pago planilla de agua o Compra repuestos)"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Monto USD ($):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: expMonto
                         placeholderText: "Monto USD ($)"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
                 }
             }
@@ -331,12 +333,13 @@ ScrollView {
                 id: txtNewCategoryName
                 width: parent.width
                 placeholderText: "ej. Alimentación, Publicidad..."
-                color: "#FFFFFF"
+                placeholderTextColor: theme.textMuted
+                color: theme.inputColor
                 font.bold: true
                 font.pixelSize: 12
                 selectionColor: theme.colorBronze
                 selectedTextColor: "#FFFFFF"
-                background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
             }
 
             Row {

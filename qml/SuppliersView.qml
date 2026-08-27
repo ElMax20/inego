@@ -264,22 +264,30 @@ ScrollView {
                     TextField {
                         id: supRuc
                         placeholderText: "ej. 0991234567001"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]{10,13}$/ }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Razón Social del Proveedor:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: supName
                         placeholderText: "ej. Ferretería Industrial Guayaquil S.A."
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Categoría / Tipo de Producto del Proveedor (Incluye Opción de Nueva Categoría):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
@@ -298,54 +306,58 @@ ScrollView {
                     TextField {
                         id: supContactName
                         placeholderText: "ej. Ing. Carlos Mendoza"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Teléfono / WhatsApp del Contacto (9 o 10 dígitos numéricos):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: supContactPhone
                         placeholderText: "ej. 0991234567 o 042123456"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]{9,10}$/ }
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Dirección del Proveedor:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: supAddress
                         placeholderText: "ej. Av. Francisco de Orellana y Vía Samborondón"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Correo Electrónico (Requerido: @gmail.com, @hotmail.com, @outlook.com, etc.):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: supEmail
                         placeholderText: "ej. ventas@gmail.com"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Origen / Clasificación de Ubicación:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
@@ -453,7 +465,18 @@ ScrollView {
 
             Text { text: "Agregar Nueva Categoría"; font.pixelSize: 14; font.bold: true; color: theme.colorBronze }
             Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-            TextField { id: newCatName; placeholderText: "ej. Insumos Químicos / Embalaje"; width: parent.width; color: theme.textPrimary }
+            TextField {
+                id: newCatName
+                placeholderText: "ej. Insumos Químicos / Embalaje"
+                placeholderTextColor: theme.textMuted
+                width: parent.width
+                color: theme.inputColor
+                font.bold: true
+                font.pixelSize: 12
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
+                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+            }
 
             Row {
                 anchors.right: parent.right

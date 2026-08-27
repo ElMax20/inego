@@ -41,10 +41,15 @@ ScrollView {
                 width: parent.width - 180
                 height: 40
                 placeholderText: "🔍 Buscar en el stock por nombre, código o categoría..."
-                color: theme.textPrimary
+                placeholderTextColor: theme.textMuted
+                color: theme.inputColor
+                font.bold: true
+                font.pixelSize: 12
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
                 onAccepted: stockRoot.loadData(txtSearch.text)
                 background: Rectangle {
-                    color: theme.bgCard
+                    color: theme.inputBg
                     radius: 8
                     border.color: theme.borderColor
                 }
@@ -239,8 +244,9 @@ ScrollView {
                 width: parent.width
                 height: 38
                 placeholderText: "Cantidad a despachar"
+                placeholderTextColor: theme.textMuted
                 text: "1"
-                color: "#FFFFFF"
+                color: theme.inputColor
                 font.bold: true
                 font.pixelSize: 13
                 horizontalAlignment: Text.AlignHCenter
@@ -249,7 +255,7 @@ ScrollView {
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
                 background: Rectangle {
-                    color: theme.bgMain
+                    color: theme.inputBg
                     radius: 6
                     border.color: theme.colorBronze
                     border.width: 1.5
@@ -334,8 +340,9 @@ ScrollView {
                 width: parent.width
                 height: 38
                 placeholderText: "Cantidad (ej. 20)"
+                placeholderTextColor: theme.textMuted
                 text: "10"
-                color: "#FFFFFF"
+                color: theme.inputColor
                 font.bold: true
                 font.pixelSize: 13
                 selectionColor: theme.colorBronze
@@ -343,7 +350,7 @@ ScrollView {
                 inputMethodHints: Qt.ImhDigitsOnly
                 validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
                 background: Rectangle {
-                    color: theme.bgMain
+                    color: theme.inputBg
                     radius: 6
                     border.color: theme.borderColor
                 }

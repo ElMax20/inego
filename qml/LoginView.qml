@@ -103,15 +103,16 @@ Rectangle {
                 width: parent.width
                 height: 42
                 placeholderText: "Ingrese su usuario corporativo..."
+                placeholderTextColor: theme.textMuted
                 text: ""
-                color: "#FFFFFF"
+                color: theme.inputColor
                 font.bold: true
                 font.pixelSize: 13
                 selectionColor: theme.colorBronze
                 selectedTextColor: "#FFFFFF"
                 onAccepted: loginRoot.doLogin()
                 background: Rectangle {
-                    color: theme.bgMain
+                    color: theme.inputBg
                     radius: 8
                     border.color: txtUser.activeFocus ? theme.colorBronze : theme.borderColor
                 }
@@ -131,15 +132,16 @@ Rectangle {
                 height: 42
                 echoMode: TextInput.Password
                 placeholderText: "••••••••"
+                placeholderTextColor: theme.textMuted
                 text: ""
-                color: "#FFFFFF"
+                color: theme.inputColor
                 font.bold: true
                 font.pixelSize: 13
                 selectionColor: theme.colorBronze
                 selectedTextColor: "#FFFFFF"
                 onAccepted: loginRoot.doLogin()
                 background: Rectangle {
-                    color: theme.bgMain
+                    color: theme.inputBg
                     radius: 8
                     border.color: txtPass.activeFocus ? theme.colorBronze : theme.borderColor
                 }

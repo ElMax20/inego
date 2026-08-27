@@ -49,10 +49,15 @@ ScrollView {
                 width: parent.width - 340
                 height: 40
                 placeholderText: "Buscar producto por código, nombre o categoría..."
-                color: theme.textPrimary
+                placeholderTextColor: theme.textMuted
+                color: theme.inputColor
+                font.bold: true
+                font.pixelSize: 12
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
                 onAccepted: catRoot.loadData(txtSearch.text)
                 background: Rectangle {
-                    color: theme.bgCard
+                    color: theme.inputBg
                     radius: 8
                     border.color: theme.borderColor
                 }
@@ -275,39 +280,42 @@ ScrollView {
                     TextField {
                         id: npCode
                         placeholderText: "ej. FER-001"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Nombre del Producto:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: npName
                         placeholderText: "ej. Cuchillas Doble Filo Industrial"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Descripción del Producto:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: npDesc
                         placeholderText: "ej. Cuchillas industriales de alta resistencia de acero templado"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Categoría de Producto (Incluye Categorías Registradas):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
@@ -336,45 +344,48 @@ ScrollView {
                     TextField {
                         id: npStockMin
                         placeholderText: "ej. 5"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Stock Inicial (Únicamente Números):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: npStockInit
                         placeholderText: "ej. 50"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhDigitsOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]+$/ }
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
                     Text { text: "Costo Referencial USD (Únicamente Números / Decimales):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: npPrice
                         placeholderText: "ej. 25.50"
+                        placeholderTextColor: theme.textMuted
                         width: parent.width
-                        color: "#FFFFFF"
+                        color: theme.inputColor
                         font.bold: true
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
                         inputMethodHints: Qt.ImhFormattedNumbersOnly
                         validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
-                        background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
                 }
             }
@@ -474,7 +485,18 @@ ScrollView {
 
             Text { text: "Agregar Nueva Categoría"; font.pixelSize: 14; font.bold: true; color: theme.colorBronze }
             Text { text: "Nombre de la Nueva Categoría:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-            TextField { id: newCatName; placeholderText: "ej. Insumos Médicos / Químicos"; width: parent.width; color: theme.textPrimary }
+            TextField {
+                id: newCatName
+                placeholderText: "ej. Insumos Médicos / Químicos"
+                placeholderTextColor: theme.textMuted
+                width: parent.width
+                color: theme.inputColor
+                font.bold: true
+                font.pixelSize: 12
+                selectionColor: theme.colorBronze
+                selectedTextColor: "#FFFFFF"
+                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+            }
 
             Row {
                 anchors.right: parent.right

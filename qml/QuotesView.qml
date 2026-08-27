@@ -933,14 +933,14 @@ ScrollView {
             TextField {
                 id: txtNewQtyVal
                 width: parent.width
-                color: "#FFFFFF"
+                color: theme.inputColor
                 font.bold: true
                 font.pixelSize: 12
                 selectionColor: theme.colorBronze
                 selectedTextColor: "#FFFFFF"
                 text: "1"
                 inputMethodHints: Qt.ImhDigitsOnly
-                background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
             }
 
             Row {

@@ -23,6 +23,10 @@ QtObject {
     property color textSecondary: isDark ? "#CBD5E1" : "#4A5568"
     property color textMuted: isDark ? "#8F9CAE" : "#718096"
 
+    // Campos de Entrada Adaptativos (Letras Blancas en Modo Oscuro / Letras Negras en Modo Claro)
+    property color inputColor: isDark ? "#FFFFFF" : "#0F172A"
+    property color inputBg: isDark ? "#1E2430" : "#FFFFFF"
+
     // Badges y Estados
     property color badgeBgBronze: isDark ? "#1C2230" : "#FDF8F3"
     property color badgeTextBronze: isDark ? "#D4A373" : "#B88865"
