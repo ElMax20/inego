@@ -259,17 +259,17 @@ class PayrollModel:
         return db.fetch_all("SELECT * FROM roles_pago ORDER BY id DESC")
 
     @staticmethod
-    def calculate_and_save(periodo_mes_anio, socio_nombre, monto_bono_ajustado, observaciones=""):
+    def calculate_and_save(periodo_mes_anio, socio_nombre, monto_bono_ajustado, observaciones="", monto_fijo=50.00):
         total_ventas_row = db.fetch_one("SELECT SUM(total) as tot FROM cotizaciones WHERE estado IN ('Aprobada', 'Facturada')")
         total_ventas = float(total_ventas_row['tot'] or 0.0) if total_ventas_row else 0.0
         
-        monto_fijo = 50.00
+        fijo_val = float(monto_fijo or 50.00)
         bono_calculado = total_ventas * 0.05
         bono_final = float(monto_bono_ajustado) if monto_bono_ajustado is not None else bono_calculado
-        total_pagar = monto_fijo + bono_final
+        total_pagar = fijo_val + bono_final
 
         query = """
             INSERT INTO roles_pago (periodo_mes_anio, socio_nombre, monto_fijo, total_ventas_mes, porcentaje_bono, monto_bono_calculado, monto_bono_ajustado, total_pagar, fecha_emision, estado, observaciones)
-            VALUES (%s, %s, 50.00, %s, 5.00, %s, %s, %s, CURRENT_DATE, 'Pagado', %s)
+            VALUES (%s, %s, %s, %s, 5.00, %s, %s, %s, CURRENT_DATE, 'Pagado', %s)
         """
-        return db.execute_query(query, (periodo_mes_anio, socio_nombre, total_ventas, bono_calculado, bono_final, total_pagar, observaciones))
+        return db.execute_query(query, (periodo_mes_anio, socio_nombre, fijo_val, total_ventas, bono_calculado, bono_final, total_pagar, observaciones))

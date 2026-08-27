@@ -607,10 +607,13 @@ class BackendBridge(QObject):
         except Exception as e:
             return json.dumps({"success": False, "message": f"Error al guardar gasto: {str(e)}"})
 
+    @Slot(float, result=str)
     @Slot(result=str)
-    def getPayrollData(self):
-        """ Retorna los Roles de Pago de Socios (RF4.4) consolidando el Sueldo Fijo ($50) + Bono Contable (RF4.3) """
+    def getPayrollData(self, base_fijo=50.00):
+        """ Retorna los Roles de Pago de Socios (RF4.4) consolidando el Sueldo Fijo (Modificable, $50 por defecto) + Bono Contable (RF4.3) """
         try:
+            fixed_pay = float(base_fijo or 50.00)
+            
             r_ventas = db.fetch_one("SELECT SUM(total) as total FROM cotizaciones WHERE estado IN ('Facturada', 'Aprobada')")
             sales_val = float(r_ventas['total'] or 0.0) if r_ventas else 12450.00
             
@@ -622,7 +625,6 @@ class BackendBridge(QObject):
             if bonus_val <= 0:
                 bonus_val = 1058.50
             
-            fixed_pay = PARTNER_FIXED_PAY # $50.00
             total_pay = fixed_pay + bonus_val
             
             partners = [
@@ -668,9 +670,9 @@ class BackendBridge(QObject):
                 "partners": partners
             })
         except Exception as e:
-            fixed_pay = 50.00
+            fixed_pay = float(base_fijo or 50.00)
             bonus_val = 1058.50
-            total_pay = 1108.50
+            total_pay = fixed_pay + bonus_val
             partners = [
                 {"id": 1, "nombre": "Socio 1 - Administrador de Dinero", "cargo": "Dirección Financiera", "sueldo_base": fixed_pay, "pago_fijo": fixed_pay, "bono_5": bonus_val, "deducciones": 0.00, "total": total_pay, "estado": "Aprobado"},
                 {"id": 2, "nombre": "Socio 2 - Compras y Mercadería", "cargo": "Gestión de Proveedores e Inventario", "sueldo_base": fixed_pay, "pago_fijo": fixed_pay, "bono_5": bonus_val, "deducciones": 0.00, "total": total_pay, "estado": "Calculado"},
@@ -684,27 +686,31 @@ class BackendBridge(QObject):
                 "partners": partners
             })
 
+    @Slot(float, result=str)
     @Slot(result=str)
-    def aprobarRolesMes(self):
+    def aprobarRolesMes(self, base_fijo=50.00):
         """ Aprobar y confirmar la liquidación de Roles de Pago del mes actual para los 3 socios (RF4.4) """
         try:
             from models.models import PayrollModel
             from datetime import datetime
             mes_actual = datetime.now().strftime("%B %Y")
+            fijo_val = float(base_fijo or 50.00)
             
-            p1 = PayrollModel.calculate_and_save(mes_actual, "Socio 1 - Administrador de Dinero", 1058.50, "Aprobación masiva del mes")
-            p2 = PayrollModel.calculate_and_save(mes_actual, "Socio 2 - Compras y Mercadería", 1058.50, "Aprobación masiva del mes")
-            p3 = PayrollModel.calculate_and_save(mes_actual, "Socio 3 - Proceso Contable", 1058.50, "Aprobación masiva del mes")
+            p1 = PayrollModel.calculate_and_save(mes_actual, "Socio 1 - Administrador de Dinero", 1058.50, "Aprobación masiva del mes", monto_fijo=fijo_val)
+            p2 = PayrollModel.calculate_and_save(mes_actual, "Socio 2 - Compras y Mercadería", 1058.50, "Aprobación masiva del mes", monto_fijo=fijo_val)
+            p3 = PayrollModel.calculate_and_save(mes_actual, "Socio 3 - Proceso Contable", 1058.50, "Aprobación masiva del mes", monto_fijo=fijo_val)
             
             user_name = self._current_user['nombre_completo'] if self._current_user else "Socio 1 - Administrador de Dinero"
-            AuditLogModel.log(user_name, "Aprobación de Nómina (RF4.4)", f"Aprobó y liquidó los roles de pago del periodo {mes_actual} ($1,108.50 USD por socio)")
+            tot_neto = fijo_val + 1058.50
+            AuditLogModel.log(user_name, "Aprobación de Nómina (RF4.4)", f"Aprobó y liquidó los roles de pago del periodo {mes_actual} (Sueldo Base: ${fijo_val:,.2f} USD, Total: ${tot_neto:,.2f} USD por socio)")
             
-            return json.dumps({"success": True, "message": f"✅ Roles de pago del período {mes_actual} aprobados y liquidados exitosamente."})
+            return json.dumps({"success": True, "message": f"✅ Roles de pago del período {mes_actual} aprobados exitosamente (Sueldo Base: ${fijo_val:,.2f} USD)."})
         except Exception as e:
             return json.dumps({"success": False, "message": f"Error al aprobar roles de pago: {str(e)}"})
 
+    @Slot(int, float, result=str)
     @Slot(int, result=str)
-    def exportarRolPDF(self, socio_id):
+    def exportarRolPDF(self, socio_id, base_fijo=50.00):
         """ Exporta y genera el Comprobante Físico de Rol de Pago en formato PDF (ReportLab) """
         try:
             from models.models import PayrollModel
@@ -718,8 +724,9 @@ class BackendBridge(QObject):
             }
             socio_name = names.get(socio_id, "Socio 1 - Administrador de Dinero")
             mes_actual = datetime.now().strftime("%B %Y")
+            fijo_val = float(base_fijo or 50.00)
             
-            payroll_id = PayrollModel.calculate_and_save(mes_actual, socio_name, 1058.50, "Generación comprobante PDF")
+            payroll_id = PayrollModel.calculate_and_save(mes_actual, socio_name, 1058.50, "Generación comprobante PDF", monto_fijo=fijo_val)
             pdf_path = generate_payslip_pdf(payroll_id)
             
             if pdf_path and os.path.exists(pdf_path) and hasattr(os, 'startfile'):

@@ -13,14 +13,15 @@ ScrollView {
     Component.onCompleted: refresh()
 
     function refresh() {
-        var raw = backend.getPayrollData()
+        var val = parseFloat(txtSueldoBase.text) || 50.00
+        var raw = backend.getPayrollData(val)
         if (raw) {
             var data = JSON.parse(raw)
             if (data.partners) {
                 payroll = data.partners
-                sueldoBaseFijo = data.sueldo_base_fijo || 50.00
+                sueldoBaseFijo = data.sueldo_base_fijo || val
                 bonoContable5 = data.bono_contable_5 || 1058.50
-                totalNetoPorSocio = data.total_neto_por_socio || 1108.50
+                totalNetoPorSocio = data.total_neto_por_socio || (val + bonoContable5)
             } else {
                 payroll = data
             }
@@ -63,7 +64,7 @@ ScrollView {
                     color: theme.colorBronze
                 }
 
-                // FILA DE CAMPOS DESGLOSADOS
+                // FILA DE CAMPOS DESGLOSADOS CON SUELDO BASE MODIFICABLE
                 Row {
                     width: parent.width
                     spacing: 30
@@ -71,18 +72,28 @@ ScrollView {
                     Column {
                         spacing: 2
                         Text { text: "Sueldo Base Fijo Mensual:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
-                        Rectangle {
-                            height: 26
+                        TextField {
+                            id: txtSueldoBase
+                            height: 32
                             width: 110
-                            color: theme.isDark ? "#2A3444" : "#E2E8F0"
-                            radius: 6
-                            border.color: theme.borderColor
-                            Text {
-                                anchors.centerIn: parent
-                                text: "$ " + payRoot.sueldoBaseFijo.toFixed(2) + " USD"
-                                font.pixelSize: 11
-                                font.bold: true
-                                color: theme.textMuted
+                            text: payRoot.sueldoBaseFijo.toFixed(2)
+                            color: theme.isDark ? "#000000" : "#0F172A"
+                            font.bold: true
+                            font.pixelSize: 12
+                            selectionColor: theme.colorBronze
+                            selectedTextColor: "#FFFFFF"
+                            inputMethodHints: Qt.ImhFormattedNumbersOnly
+                            validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
+                            background: Rectangle {
+                                color: "#FFFFFF"
+                                radius: 6
+                                border.color: theme.colorBronze
+                                border.width: 1.5
+                            }
+                            onTextChanged: {
+                                var val = parseFloat(txtSueldoBase.text) || 50.00
+                                payRoot.sueldoBaseFijo = val
+                                payRoot.totalNetoPorSocio = val + payRoot.bonoContable5
                             }
                         }
                     }
@@ -137,7 +148,8 @@ ScrollView {
                         contentItem: Text { text: "✓ Aprobar y Generar Roles del Mes"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: theme.colorBronze; radius: 6 }
                         onClicked: {
-                            var resStr = backend.aprobarRolesMes()
+                            var val = parseFloat(txtSueldoBase.text) || 50.00
+                            var resStr = backend.aprobarRolesMes(val)
                             var res = JSON.parse(resStr)
                             payMsgTxt.text = res.message
                             payMsgDialog.open()
@@ -207,7 +219,7 @@ ScrollView {
                             }
 
                             Text {
-                                text: "Cargo: " + modelData.cargo + " | Sueldo Base: $" + modelData.sueldo_base.toFixed(2) + " + Bono RF4.3: $" + modelData.bono_5.toFixed(2) + " - Deducciones: $" + (modelData.deducciones || 0.0).toFixed(2)
+                                text: "Cargo: " + modelData.cargo + " | Sueldo Base: $" + payRoot.sueldoBaseFijo.toFixed(2) + " + Bono RF4.3: $" + modelData.bono_5.toFixed(2) + " - Deducciones: $" + (modelData.deducciones || 0.0).toFixed(2)
                                 font.pixelSize: 11
                                 color: theme.textMuted
                             }
@@ -220,7 +232,7 @@ ScrollView {
                             spacing: 12
 
                             Text {
-                                text: "$ " + modelData.total.toLocaleString(Qt.locale(), "f", 2) + " USD"
+                                text: "$ " + payRoot.totalNetoPorSocio.toLocaleString(Qt.locale(), "f", 2) + " USD"
                                 font.pixelSize: 14
                                 font.bold: true
                                 color: theme.colorSuccess
@@ -233,7 +245,8 @@ ScrollView {
                                 contentItem: Text { text: "📄 Comprobante PDF"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 background: Rectangle { color: theme.colorBronze; radius: 6 }
                                 onClicked: {
-                                    var resStr = backend.exportarRolPDF(modelData.id)
+                                    var val = parseFloat(txtSueldoBase.text) || 50.00
+                                    var resStr = backend.exportarRolPDF(modelData.id, val)
                                     var res = JSON.parse(resStr)
                                     payMsgTxt.text = res.message
                                     payMsgDialog.open()
