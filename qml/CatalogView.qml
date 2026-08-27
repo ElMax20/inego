@@ -499,8 +499,8 @@ ScrollView {
             }
 
             Row {
-                anchors.right: parent.right
-                spacing: 10
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
 
                 Button {
                     height: 32

@@ -6,12 +6,40 @@ ScrollView {
     clip: true
 
     property var expenses: []
+    property var filteredExpenses: []
+    property var categoryList: ["Todas las Categorías", "Agua y Servicios", "Logística y Envíos", "Gestión Operativa", "Compras Varias", "Mantenimiento"]
 
     Component.onCompleted: refresh()
 
     function refresh() {
         var raw = backend.getExpensesData()
         expenses = JSON.parse(raw)
+        
+        // Extraer categorías únicas de la base de datos
+        var cats = ["Todas las Categorías", "Agua y Servicios", "Logística y Envíos", "Gestión Operativa", "Compras Varias", "Mantenimiento"]
+        for (var i = 0; i < expenses.length; i++) {
+            var r = expenses[i].rubro
+            if (r && cats.indexOf(r) === -1) {
+                cats.push(r)
+            }
+        }
+        categoryList = cats
+        applyFilter()
+    }
+
+    function applyFilter() {
+        var selectedCat = filterCategoryCombo.currentText
+        if (!selectedCat || selectedCat === "Todas las Categorías") {
+            filteredExpenses = expenses
+        } else {
+            var temp = []
+            for (var i = 0; i < expenses.length; i++) {
+                if (expenses[i].rubro === selectedCat) {
+                    temp.push(expenses[i])
+                }
+            }
+            filteredExpenses = temp
+        }
     }
 
     Column {
@@ -59,9 +87,31 @@ ScrollView {
             }
         }
 
-        // LISTA DE GASTOS EN QML CON POSICIONAMIENTO DE ITEM CORREGIDO
+        // BARRA DE FILTRO POR CATEGORÍA DE GASTO (Estilo Referencia)
+        Row {
+            spacing: 10
+            width: parent.width
+
+            Text {
+                text: "Categoría de Gasto:"
+                font.pixelSize: 12
+                font.bold: true
+                color: theme.colorBronze
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            ComboBox {
+                id: filterCategoryCombo
+                width: 280
+                height: 36
+                model: expRoot.categoryList
+                onActivated: expRoot.applyFilter()
+            }
+        }
+
+        // LISTA DE GASTOS EN QML FILTRADA POR CATEGORÍA
         Repeater {
-            model: expRoot.expenses
+            model: expRoot.filteredExpenses
 
             Rectangle {
                 width: parent.width
@@ -343,8 +393,8 @@ ScrollView {
             }
 
             Row {
-                anchors.right: parent.right
-                spacing: 10
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
 
                 Button {
                     height: 32
