@@ -589,8 +589,17 @@ class BackendBridge(QObject):
 
     @Slot(str, str, float, result=str)
     def addExpense(self, concepto, rubro, monto):
-        if not concepto or not monto:
-            return json.dumps({"success": False, "message": "Por favor llene los datos del gasto."})
+        if not concepto or not concepto.strip():
+            return json.dumps({"success": False, "message": "🚫 Error: Por favor ingrese la descripción o concepto del gasto."})
+        
+        try:
+            monto_float = float(monto)
+        except (ValueError, TypeError):
+            return json.dumps({"success": False, "message": "🚫 Error: El monto del gasto contiene caracteres no numéricos no válidos."})
+        
+        if monto_float <= 0:
+            return json.dumps({"success": False, "message": "🚫 Error al registrar gasto: El monto debe ser un valor numérico estrictamente positivo mayor a 0.00 USD (no se permiten números negativos ni letras)."})
+
         try:
             from datetime import datetime
             fecha_hoy = datetime.now().strftime("%Y-%m-%d")
@@ -598,10 +607,10 @@ class BackendBridge(QObject):
             db.execute_query("""
                 INSERT INTO gastos (fecha, categoria, concepto, monto, metodo_pago, registrado_por)
                 VALUES (%s, %s, %s, %s, 'Caja Chica', %s)
-            """, (fecha_hoy, rubro, concepto, monto, registrado_por))
+            """, (fecha_hoy, rubro, concepto.strip(), monto_float, registrado_por))
             
             if self._current_user:
-                AuditLogModel.log(self._current_user['nombre_completo'], "Registro de Gasto", f"Registró gasto de caja chica: {concepto} por ${monto:,.2f} USD")
+                AuditLogModel.log(self._current_user['nombre_completo'], "Registro de Gasto", f"Registró gasto de caja chica: {concepto.strip()} por ${monto_float:,.2f} USD")
             
             return json.dumps({"success": True, "message": "Gasto registrado exitosamente."})
         except Exception as e:

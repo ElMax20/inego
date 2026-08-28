@@ -290,7 +290,7 @@ ScrollView {
                     Text { text: "Monto USD ($):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: expMonto
-                        placeholderText: "Monto USD ($)"
+                        placeholderText: "Monto USD ($) ej. 25.00"
                         placeholderTextColor: theme.textMuted
                         width: parent.width
                         color: theme.inputColor
@@ -298,6 +298,8 @@ ScrollView {
                         font.pixelSize: 12
                         selectionColor: theme.colorBronze
                         selectedTextColor: "#FFFFFF"
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
                         background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
                 }
@@ -320,10 +322,24 @@ ScrollView {
                         contentItem: Text { text: "Registrar Gasto"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: theme.colorBronze; radius: 6 }
                         onClicked: {
-                            var cleanMonto = expMonto.text.replace(",", ".")
-                            var val = parseFloat(cleanMonto) || 0.0
+                            var conceptText = expConcept.text.trim()
+                            if (!conceptText) {
+                                expErrTxt.text = "🚫 Error al registrar gasto:\n\nPor favor ingrese la descripción o concepto del gasto."
+                                expErrDialog.open()
+                                return
+                            }
+
+                            var rawMonto = expMonto.text.trim().replace(",", ".")
+                            var numRegex = /^[0-9]+(\.[0-9]{1,2})?$/
+                            if (!rawMonto || !numRegex.test(rawMonto) || parseFloat(rawMonto) <= 0) {
+                                expErrTxt.text = "🚫 Error al registrar gasto:\n\nEl monto ingresado ('" + expMonto.text + "') es inválido.\nDebe ser un valor numérico estrictamente positivo mayor a 0.00 USD (sin letras ni números negativos)."
+                                expErrDialog.open()
+                                return
+                            }
+
+                            var val = parseFloat(rawMonto)
                             var rubroText = categoryModel.get(expRubro.currentIndex).text
-                            var resStr = backend.addExpense(expConcept.text, rubroText, val)
+                            var resStr = backend.addExpense(conceptText, rubroText, val)
                             var res = JSON.parse(resStr)
                             
                             if (!res.success) {
