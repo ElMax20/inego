@@ -380,7 +380,36 @@ ScrollView {
                     ComboBox {
                         id: cmbNewSocioCargo
                         width: parent.width
-                        model: ["Administrador de Dinero", "Compras y Mercadería", "Proceso Contable"]
+                        model: {
+                            var r = backend.getCurrentUserRole()
+                            var list = ["Administrador de Dinero", "Compras y Mercadería", "Proceso Contable"]
+                            if (r === "Administrador" || r === "Administrador General") {
+                                list.unshift("Administrador")
+                            }
+                            list.push("➕ Agregar Nuevo Rol...")
+                            return list
+                        }
+                        onCurrentTextChanged: {
+                            if (currentText === "➕ Agregar Nuevo Rol...") {
+                                txtCustomCargo.visible = true
+                            } else {
+                                txtCustomCargo.visible = false
+                            }
+                        }
+                    }
+
+                    TextField {
+                        id: txtCustomCargo
+                        visible: false
+                        placeholderText: "Escriba el nombre del nuevo rol personalizado"
+                        placeholderTextColor: theme.textMuted
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.colorBronze }
                     }
 
                     Row {
@@ -446,11 +475,14 @@ ScrollView {
                         onClicked: {
                             var name = txtNewSocioNombre.text.trim()
                             var cargo = cmbNewSocioCargo.currentText
+                            if (cargo === "➕ Agregar Nuevo Rol...") {
+                                cargo = txtCustomCargo.text.trim()
+                            }
                             var username = txtNewSocioUsername.text.trim()
                             var password = txtNewSocioPassword.text.trim()
 
-                            if (!name || !username || !password) {
-                                payMsgTxt.text = "🚫 Error al registrar rol y usuario:\n\nPor favor complete todos los campos (Nombre, Usuario y Contraseña)."
+                            if (!name || !cargo || !username || !password) {
+                                payMsgTxt.text = "🚫 Error al registrar rol y usuario:\n\nPor favor complete todos los campos (Nombre, Rol/Cargo, Usuario y Contraseña)."
                                 payMsgDialog.open()
                                 return
                             }

@@ -415,7 +415,36 @@ ScrollView {
                     ComboBox {
                         id: newRole
                         width: parent.width
-                        model: ["Compras y Mercadería", "Contabilidad", "Administrador de Dinero"]
+                        model: {
+                            var r = userRoot.currentUserRole
+                            var list = ["Administrador de Dinero", "Compras y Mercadería", "Contabilidad"]
+                            if (r === "Administrador" || r === "Administrador General") {
+                                list.unshift("Administrador")
+                            }
+                            list.push("➕ Agregar Nuevo Rol...")
+                            return list
+                        }
+                        onCurrentTextChanged: {
+                            if (currentText === "➕ Agregar Nuevo Rol...") {
+                                txtCustomUserRole.visible = true
+                            } else {
+                                txtCustomUserRole.visible = false
+                            }
+                        }
+                    }
+
+                    TextField {
+                        id: txtCustomUserRole
+                        visible: false
+                        placeholderText: "Escriba el nombre del nuevo rol personalizado"
+                        placeholderTextColor: theme.textMuted
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.colorBronze }
                     }
                 }
             }
@@ -437,7 +466,11 @@ ScrollView {
                         contentItem: Text { text: "Guardar Usuario"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: theme.colorBronze; radius: 6 }
                         onClicked: {
-                            var resStr = backend.createUser(newUname.text, newFullName.text, newPass.text, newRole.currentText)
+                            var rName = newRole.currentText
+                            if (rName === "➕ Agregar Nuevo Rol...") {
+                                rName = txtCustomUserRole.text.trim()
+                            }
+                            var resStr = backend.createUser(newUname.text, newFullName.text, newPass.text, rName)
                             var res = JSON.parse(resStr)
                             newUserPopup.close()
                             userRoot.refresh()
