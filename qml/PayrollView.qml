@@ -35,12 +35,42 @@ ScrollView {
 
         Item { height: 10; width: 1 }
 
-        // HEADER PRINCIPAL NÓMINA DE SOCIOS (RF4.4)
-        Text {
-            text: "👔 Nómina y Roles de Pago de Socios (RF4.4)"
-            font.pixelSize: 15
-            font.bold: true
-            color: theme.textPrimary
+        // HEADER PRINCIPAL NÓMINA DE SOCIOS (RF4.4) CON BOTÓN DE AGREGAR ROL
+        Item {
+            width: parent.width
+            height: 40
+
+            Text {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "👔 Nómina y Roles de Pago de Socios (RF4.4)"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.textPrimary
+            }
+
+            Rectangle {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                height: 36
+                width: 170
+                radius: 8
+                color: theme.colorBronze
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "➕ Agregar Rol de Pago"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 11
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: newPayrollPopup.open()
+                }
+            }
         }
 
         // PANEL RESUMEN DE LIQUIDACIÓN (TARJETA CORPORATIVA REDONDEADA)
@@ -219,7 +249,7 @@ ScrollView {
                             }
 
                             Text {
-                                text: "Cargo: " + modelData.cargo + " | Sueldo Base: $" + payRoot.sueldoBaseFijo.toFixed(2) + " + Bono RF4.3: $" + modelData.bono_5.toFixed(2) + " - Deducciones: $" + (modelData.deducciones || 0.0).toFixed(2)
+                                text: "Cargo: " + modelData.cargo + " | Sueldo Base: $" + (modelData.sueldo_base || payRoot.sueldoBaseFijo).toFixed(2) + " + Bono RF4.3: $" + modelData.bono_5.toFixed(2) + " - Deducciones: $" + (modelData.deducciones || 0.0).toFixed(2)
                                 font.pixelSize: 11
                                 color: theme.textMuted
                             }
@@ -232,7 +262,7 @@ ScrollView {
                             spacing: 12
 
                             Text {
-                                text: "$ " + payRoot.totalNetoPorSocio.toLocaleString(Qt.locale(), "f", 2) + " USD"
+                                text: "$ " + modelData.total.toLocaleString(Qt.locale(), "f", 2) + " USD"
                                 font.pixelSize: 14
                                 font.bold: true
                                 color: theme.colorSuccess
@@ -252,6 +282,241 @@ ScrollView {
                                     payMsgDialog.open()
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // POPUP MODAL REGISTRAR NUEVO ROL DE PAGO (ARRASTRABLE Y CORPORATIVO)
+    Popup {
+        id: newPayrollPopup
+        parent: Overlay.overlay
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: 520
+        height: 470
+        modal: true
+        focus: true
+        closePolicy: Popup.NoAutoClose
+        padding: 0
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Item {
+            anchors.fill: parent
+
+            // BARRA SUPERIOR ARRASTRABLE
+            Rectangle {
+                id: payrollTitleBar
+                width: parent.width
+                height: 42
+                color: theme.colorBronze
+                radius: 10
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "📌 Registrar Nuevo Rol de Pago (Mover con el Mouse)"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 12
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.SizeAllCursor
+                    property point dragOffset
+                    onPressed: function(mouse) {
+                        dragOffset = Qt.point(mouse.x, mouse.y)
+                    }
+                    onPositionChanged: function(mouse) {
+                        if (pressed) {
+                            newPayrollPopup.x = newPayrollPopup.x + (mouse.x - dragOffset.x)
+                            newPayrollPopup.y = newPayrollPopup.y + (mouse.y - dragOffset.y)
+                        }
+                    }
+                }
+            }
+
+            // CONTENIDO DEL FORMULARIO
+            ScrollView {
+                id: payrollScroll
+                anchors.top: payrollTitleBar.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: payrollBottomBar.top
+                anchors.margins: 14
+                clip: true
+
+                Column {
+                    width: payrollScroll.width - 20
+                    spacing: 10
+
+                    Text { text: "Nombre del Socio / Colaborador:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: txtNewSocioNombre
+                        placeholderText: "ej. Socio 4 - Desarrollo Tecnológico o María López"
+                        placeholderTextColor: theme.textMuted
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Text { text: "Cargo / Función:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: txtNewSocioCargo
+                        placeholderText: "ej. Dirección de Desarrollo de Software"
+                        placeholderTextColor: theme.textMuted
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Row {
+                        width: parent.width
+                        spacing: 12
+
+                        Column {
+                            width: (parent.width - 24) / 3
+                            spacing: 4
+                            Text { text: "Sueldo Base ($):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: txtNewSocioSueldo
+                                text: payRoot.sueldoBaseFijo.toFixed(2)
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 11
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - 24) / 3
+                            spacing: 4
+                            Text { text: "Bono 5% ($):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: txtNewSocioBono
+                                text: payRoot.bonoContable5.toFixed(2)
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 11
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - 24) / 3
+                            spacing: 4
+                            Text { text: "Deducciones ($):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: txtNewSocioDeducciones
+                                text: "0.00"
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 11
+                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+                    }
+
+                    Text { text: "Observaciones / Nota:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: txtNewSocioObs
+                        placeholderText: "ej. Rol individual correspondiente al mes"
+                        placeholderTextColor: theme.textMuted
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+                }
+            }
+
+            // BARRA INFERIOR DE ACCIONES DEL MODAL
+            Item {
+                id: payrollBottomBar
+                width: parent.width
+                height: 48
+                anchors.bottom: parent.bottom
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Button {
+                        width: 140
+                        height: 34
+                        contentItem: Text { text: "Guardar Rol"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorBronze; radius: 6 }
+                        onClicked: {
+                            var name = txtNewSocioNombre.text.trim()
+                            var cargo = txtNewSocioCargo.text.trim()
+                            if (!name || !cargo) {
+                                payMsgTxt.text = "🚫 Error al registrar rol:\n\nPor favor ingrese el nombre del socio/colaborador y su cargo."
+                                payMsgDialog.open()
+                                return
+                            }
+
+                            var sb = parseFloat(txtNewSocioSueldo.text) || 50.00
+                            var b5 = parseFloat(txtNewSocioBono.text) || 0.00
+                            var ded = parseFloat(txtNewSocioDeducciones.text) || 0.00
+                            var obs = txtNewSocioObs.text.trim()
+
+                            var resStr = backend.addPayrollRole(name, cargo, sb, b5, ded, obs)
+                            var res = JSON.parse(resStr)
+                            
+                            if (!res.success) {
+                                payMsgTxt.text = res.message
+                                payMsgDialog.open()
+                            } else {
+                                newPayrollPopup.close()
+                                payMsgTxt.text = res.message
+                                payMsgDialog.open()
+                                txtNewSocioNombre.text = ""
+                                txtNewSocioCargo.text = ""
+                                txtNewSocioObs.text = ""
+                                payRoot.refresh()
+                            }
+                        }
+                    }
+
+                    Button {
+                        width: 100
+                        height: 34
+                        contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSlate; radius: 6 }
+                        onClicked: {
+                            newPayrollPopup.close()
                         }
                     }
                 }

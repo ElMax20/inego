@@ -671,6 +671,10 @@ class BackendBridge(QObject):
                     "estado": "Calculado"
                 }
             ]
+            if hasattr(self, '_custom_payroll_partners') and self._custom_payroll_partners:
+                for cp in self._custom_payroll_partners:
+                    partners.append(cp)
+
             return json.dumps({
                 "success": True,
                 "sueldo_base_fijo": fixed_pay,
@@ -694,6 +698,61 @@ class BackendBridge(QObject):
                 "total_neto_por_socio": total_pay,
                 "partners": partners
             })
+
+    @Slot(str, str, float, float, float, str, result=str)
+    def addPayrollRole(self, nombre, cargo, sueldo_base, bono_5, deducciones, observaciones):
+        """ Registro manual/personalizado de nuevo Rol de Pago para un socio o empleado """
+        if not nombre or not nombre.strip():
+            return json.dumps({"success": False, "message": "🚫 Error: Por favor ingrese el nombre del socio o colaborador."})
+        
+        if not cargo or not cargo.strip():
+            return json.dumps({"success": False, "message": "🚫 Error: Por favor ingrese el cargo o función."})
+        
+        try:
+            sb = float(sueldo_base)
+            b5 = float(bono_5)
+            ded = float(deducciones)
+        except (ValueError, TypeError):
+            return json.dumps({"success": False, "message": "🚫 Error: Los montos deben ser valores numéricos válidos."})
+        
+        if sb < 0 or b5 < 0 or ded < 0:
+            return json.dumps({"success": False, "message": "🚫 Error: Los montos no pueden ser números negativos."})
+        
+        total_pagar = sb + b5 - ded
+        
+        try:
+            from datetime import datetime
+            from models.models import PayrollModel
+            mes_actual = datetime.now().strftime("%B %Y")
+            
+            # Guardar en base de datos roles_pago
+            db.execute_query("""
+                INSERT INTO roles_pago (periodo_mes_anio, socio_nombre, monto_fijo, total_ventas_mes, porcentaje_bono, monto_bono_calculado, monto_bono_ajustado, total_pagar, fecha_emision, estado, observaciones)
+                VALUES (%s, %s, %s, 0.0, 5.00, %s, %s, %s, CURRENT_DATE, 'Aprobado', %s)
+            """, (mes_actual, f"{nombre.strip()} ({cargo.strip()})", sb, b5, b5, total_pagar, observaciones.strip() if observaciones else "Nuevo Rol Registrado"))
+            
+            if not hasattr(self, '_custom_payroll_partners'):
+                self._custom_payroll_partners = []
+            
+            new_id = len(self._custom_payroll_partners) + 10
+            self._custom_payroll_partners.append({
+                "id": new_id,
+                "nombre": nombre.strip(),
+                "cargo": cargo.strip(),
+                "sueldo_base": sb,
+                "pago_fijo": sb,
+                "bono_5": b5,
+                "deducciones": ded,
+                "total": total_pagar,
+                "estado": "Aprobado"
+            })
+            
+            user_name = self._current_user['nombre_completo'] if self._current_user else "Socio 1 - Administrador de Dinero"
+            AuditLogModel.log(user_name, "Registro de Rol de Pago (RF4.4)", f"Registró nuevo rol para: {nombre.strip()} ({cargo.strip()}) por ${total_pagar:,.2f} USD")
+            
+            return json.dumps({"success": True, "message": f"✅ Rol de pago para '{nombre.strip()}' registrado exitosamente (${total_pagar:,.2f} USD)."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al guardar rol de pago: {str(e)}"})
 
     @Slot(float, result=str)
     @Slot(result=str)
