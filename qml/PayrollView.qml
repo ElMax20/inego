@@ -49,8 +49,8 @@ ScrollView {
             height: 145
             color: theme.bgCard
             radius: 12
-            border.color: theme.colorBronze
-            border.width: 1.5
+            border.color: theme.borderColor
+            border.width: 1
 
             Column {
                 anchors.fill: parent
@@ -87,8 +87,8 @@ ScrollView {
                             background: Rectangle {
                                 color: "#FFFFFF"
                                 radius: 6
-                                border.color: theme.colorBronze
-                                border.width: 1.5
+                                border.color: theme.borderColor
+                                border.width: 1
                             }
                             onTextChanged: {
                                 var val = parseFloat(txtSueldoBase.text) || 50.00
