@@ -296,7 +296,7 @@ ScrollView {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
         width: 520
-        height: 470
+        height: 350
         modal: true
         focus: true
         closePolicy: Popup.NoAutoClose
@@ -390,62 +390,6 @@ ScrollView {
                         background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
-                    Row {
-                        width: parent.width
-                        spacing: 12
-
-                        Column {
-                            width: (parent.width - 24) / 3
-                            spacing: 4
-                            Text { text: "Sueldo Base ($):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
-                            TextField {
-                                id: txtNewSocioSueldo
-                                text: payRoot.sueldoBaseFijo.toFixed(2)
-                                width: parent.width
-                                color: theme.inputColor
-                                font.bold: true
-                                font.pixelSize: 11
-                                inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
-                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
-                            }
-                        }
-
-                        Column {
-                            width: (parent.width - 24) / 3
-                            spacing: 4
-                            Text { text: "Bono 5% ($):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
-                            TextField {
-                                id: txtNewSocioBono
-                                text: payRoot.bonoContable5.toFixed(2)
-                                width: parent.width
-                                color: theme.inputColor
-                                font.bold: true
-                                font.pixelSize: 11
-                                inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
-                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
-                            }
-                        }
-
-                        Column {
-                            width: (parent.width - 24) / 3
-                            spacing: 4
-                            Text { text: "Deducciones ($):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
-                            TextField {
-                                id: txtNewSocioDeducciones
-                                text: "0.00"
-                                width: parent.width
-                                color: theme.inputColor
-                                font.bold: true
-                                font.pixelSize: 11
-                                inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
-                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
-                            }
-                        }
-                    }
-
                     Text { text: "Observaciones / Nota:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
                     TextField {
                         id: txtNewSocioObs
@@ -487,9 +431,9 @@ ScrollView {
                                 return
                             }
 
-                            var sb = parseFloat(txtNewSocioSueldo.text) || 50.00
-                            var b5 = parseFloat(txtNewSocioBono.text) || 0.00
-                            var ded = parseFloat(txtNewSocioDeducciones.text) || 0.00
+                            var sb = payRoot.sueldoBaseFijo
+                            var b5 = payRoot.bonoContable5
+                            var ded = 0.00
                             var obs = txtNewSocioObs.text.trim()
 
                             var resStr = backend.addPayrollRole(name, cargo, sb, b5, ded, obs)
