@@ -376,18 +376,11 @@ ScrollView {
                         background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
                     }
 
-                    Text { text: "Cargo / Función:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField {
-                        id: txtNewSocioCargo
-                        placeholderText: "ej. Dirección de Desarrollo de Software"
-                        placeholderTextColor: theme.textMuted
+                    Text { text: "Cargo / Función / Rol del Socio:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    ComboBox {
+                        id: cmbNewSocioCargo
                         width: parent.width
-                        color: theme.inputColor
-                        font.bold: true
-                        font.pixelSize: 12
-                        selectionColor: theme.colorBronze
-                        selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                        model: ["Administrador de Dinero", "Compras y Mercadería", "Proceso Contable"]
                     }
 
                     Text { text: "Observaciones / Nota:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
@@ -424,9 +417,9 @@ ScrollView {
                         background: Rectangle { color: theme.colorBronze; radius: 6 }
                         onClicked: {
                             var name = txtNewSocioNombre.text.trim()
-                            var cargo = txtNewSocioCargo.text.trim()
-                            if (!name || !cargo) {
-                                payMsgTxt.text = "🚫 Error al registrar rol:\n\nPor favor ingrese el nombre del socio/colaborador y su cargo."
+                            var cargo = cmbNewSocioCargo.currentText
+                            if (!name) {
+                                payMsgTxt.text = "🚫 Error al registrar rol:\n\nPor favor ingrese el nombre del socio/colaborador."
                                 payMsgDialog.open()
                                 return
                             }
@@ -447,7 +440,7 @@ ScrollView {
                                 payMsgTxt.text = res.message
                                 payMsgDialog.open()
                                 txtNewSocioNombre.text = ""
-                                txtNewSocioCargo.text = ""
+                                cmbNewSocioCargo.currentIndex = 0
                                 txtNewSocioObs.text = ""
                                 payRoot.refresh()
                             }
