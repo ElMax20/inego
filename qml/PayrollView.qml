@@ -296,7 +296,7 @@ ScrollView {
         x: (parent.width - width) / 2
         y: (parent.height - height) / 2
         width: 520
-        height: 350
+        height: 430
         modal: true
         focus: true
         closePolicy: Popup.NoAutoClose
@@ -326,7 +326,7 @@ ScrollView {
                     anchors.left: parent.left
                     anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "📌 Registrar Nuevo Rol de Pago (Mover con el Mouse)"
+                    text: "📌 Registrar Nuevo Rol de Pago y Usuario (Mover con el Mouse)"
                     color: "#FFFFFF"
                     font.bold: true
                     font.pixelSize: 12
@@ -383,18 +383,46 @@ ScrollView {
                         model: ["Administrador de Dinero", "Compras y Mercadería", "Proceso Contable"]
                     }
 
-                    Text { text: "Observaciones / Nota:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField {
-                        id: txtNewSocioObs
-                        placeholderText: "ej. Rol individual correspondiente al mes"
-                        placeholderTextColor: theme.textMuted
+                    Row {
                         width: parent.width
-                        color: theme.inputColor
-                        font.bold: true
-                        font.pixelSize: 12
-                        selectionColor: theme.colorBronze
-                        selectedTextColor: "#FFFFFF"
-                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                        spacing: 12
+
+                        Column {
+                            width: (parent.width - 12) / 2
+                            spacing: 4
+                            Text { text: "Nombre de Usuario (Login):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: txtNewSocioUsername
+                                placeholderText: "ej. socio4"
+                                placeholderTextColor: theme.textMuted
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - 12) / 2
+                            spacing: 4
+                            Text { text: "Contraseña de Acceso:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: txtNewSocioPassword
+                                placeholderText: "ej. clave123"
+                                placeholderTextColor: theme.textMuted
+                                echoMode: TextInput.Password
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
                     }
                 }
             }
@@ -418,8 +446,11 @@ ScrollView {
                         onClicked: {
                             var name = txtNewSocioNombre.text.trim()
                             var cargo = cmbNewSocioCargo.currentText
-                            if (!name) {
-                                payMsgTxt.text = "🚫 Error al registrar rol:\n\nPor favor ingrese el nombre del socio/colaborador."
+                            var username = txtNewSocioUsername.text.trim()
+                            var password = txtNewSocioPassword.text.trim()
+
+                            if (!name || !username || !password) {
+                                payMsgTxt.text = "🚫 Error al registrar rol y usuario:\n\nPor favor complete todos los campos (Nombre, Usuario y Contraseña)."
                                 payMsgDialog.open()
                                 return
                             }
@@ -427,9 +458,8 @@ ScrollView {
                             var sb = payRoot.sueldoBaseFijo
                             var b5 = payRoot.bonoContable5
                             var ded = 0.00
-                            var obs = txtNewSocioObs.text.trim()
 
-                            var resStr = backend.addPayrollRole(name, cargo, sb, b5, ded, obs)
+                            var resStr = backend.addPayrollRole(name, cargo, username, password, sb, b5, ded, "")
                             var res = JSON.parse(resStr)
                             
                             if (!res.success) {
@@ -441,7 +471,8 @@ ScrollView {
                                 payMsgDialog.open()
                                 txtNewSocioNombre.text = ""
                                 cmbNewSocioCargo.currentIndex = 0
-                                txtNewSocioObs.text = ""
+                                txtNewSocioUsername.text = ""
+                                txtNewSocioPassword.text = ""
                                 payRoot.refresh()
                             }
                         }

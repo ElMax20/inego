@@ -699,37 +699,54 @@ class BackendBridge(QObject):
                 "partners": partners
             })
 
-    @Slot(str, str, float, float, float, str, result=str)
-    def addPayrollRole(self, nombre, cargo, sueldo_base, bono_5, deducciones, observaciones):
-        """ Registro manual/personalizado de nuevo Rol de Pago para un socio o empleado """
+    @Slot(str, str, str, str, float, float, float, str, result=str)
+    @Slot(str, str, str, str, float, float, float, result=str)
+    @Slot(str, str, str, str, result=str)
+    def addPayrollRole(self, nombre, cargo, username="", password="", sueldo_base=50.0, bono_5=0.0, deducciones=0.0, observaciones=""):
+        """ Registro de nuevo Rol de Pago con creación automática de cuenta de Usuario (RF1.1 / RF4.4) """
         if not nombre or not nombre.strip():
             return json.dumps({"success": False, "message": "🚫 Error: Por favor ingrese el nombre del socio o colaborador."})
         
         if not cargo or not cargo.strip():
             return json.dumps({"success": False, "message": "🚫 Error: Por favor ingrese el cargo o función."})
         
+        u_clean = username.strip() if username else ""
+        p_clean = password.strip() if password else ""
+        
+        if not u_clean:
+            return json.dumps({"success": False, "message": "🚫 Error: Por favor ingrese el Nombre de Usuario para el acceso."})
+        
+        if not p_clean:
+            return json.dumps({"success": False, "message": "🚫 Error: Por favor ingrese la Contraseña para la cuenta."})
+        
+        # Verificar si el nombre de usuario ya existe
+        existing_usr = db.fetch_one("SELECT id FROM usuarios WHERE LOWER(username) = %s", (u_clean.lower(),))
+        if existing_usr:
+            return json.dumps({"success": False, "message": f"🚫 Error: El nombre de usuario '@{u_clean}' ya se encuentra registrado."})
+        
         try:
-            sb = float(sueldo_base)
-            b5 = float(bono_5)
-            ded = float(deducciones)
+            sb = float(sueldo_base or 50.0)
+            b5 = float(bono_5 or 0.0)
+            ded = float(deducciones or 0.0)
         except (ValueError, TypeError):
-            return json.dumps({"success": False, "message": "🚫 Error: Los montos deben ser valores numéricos válidos."})
-        
-        if sb < 0 or b5 < 0 or ded < 0:
-            return json.dumps({"success": False, "message": "🚫 Error: Los montos no pueden ser números negativos."})
-        
+            sb, b5, ded = 50.0, 0.0, 0.0
+            
         total_pagar = sb + b5 - ded
         
         try:
             from datetime import datetime
-            from models.models import PayrollModel
+            from models.models import UserModel, AuditLogModel
             mes_actual = datetime.now().strftime("%B %Y")
             
-            # Guardar en base de datos roles_pago
+            # 1. Crear la cuenta de usuario en la tabla usuarios (Cifrado SHA-256)
+            email_dummy = f"{u_clean.lower()}@inego.com"
+            UserModel.create_user(u_clean, p_clean, nombre.strip(), email_dummy, cargo.strip())
+            
+            # 2. Guardar en la base de datos roles_pago
             db.execute_query("""
                 INSERT INTO roles_pago (periodo_mes_anio, socio_nombre, monto_fijo, total_ventas_mes, porcentaje_bono, monto_bono_calculado, monto_bono_ajustado, total_pagar, fecha_emision, estado, observaciones)
                 VALUES (%s, %s, %s, 0.0, 5.00, %s, %s, %s, CURRENT_DATE, 'Aprobado', %s)
-            """, (mes_actual, f"{nombre.strip()} ({cargo.strip()})", sb, b5, b5, total_pagar, observaciones.strip() if observaciones else "Nuevo Rol Registrado"))
+            """, (mes_actual, f"{nombre.strip()} ({cargo.strip()})", sb, b5, b5, total_pagar, f"Usuario Creado: @{u_clean}"))
             
             if not hasattr(self, '_custom_payroll_partners'):
                 self._custom_payroll_partners = []
@@ -739,6 +756,7 @@ class BackendBridge(QObject):
                 "id": new_id,
                 "nombre": nombre.strip(),
                 "cargo": cargo.strip(),
+                "username": u_clean,
                 "sueldo_base": sb,
                 "pago_fijo": sb,
                 "bono_5": b5,
@@ -747,12 +765,13 @@ class BackendBridge(QObject):
                 "estado": "Aprobado"
             })
             
-            user_name = self._current_user['nombre_completo'] if self._current_user else "Socio 1 - Administrador de Dinero"
-            AuditLogModel.log(user_name, "Registro de Rol de Pago (RF4.4)", f"Registró nuevo rol para: {nombre.strip()} ({cargo.strip()}) por ${total_pagar:,.2f} USD")
+            # 3. Registrar en la Bitácora de Auditoría
+            cur_user = self._current_user['nombre_completo'] if self._current_user else "Administrador General del Sistema"
+            AuditLogModel.log(cur_user, "Creación de Usuario y Rol", f"Registró nuevo socio '{nombre.strip()}' (@{u_clean}) con rol '{cargo.strip()}' y rol de pago de ${total_pagar:,.2f} USD")
             
-            return json.dumps({"success": True, "message": f"✅ Rol de pago para '{nombre.strip()}' registrado exitosamente (${total_pagar:,.2f} USD)."})
+            return json.dumps({"success": True, "message": f"✅ Rol y Cuenta de Usuario '@{u_clean}' registrados exitosamente en el sistema."})
         except Exception as e:
-            return json.dumps({"success": False, "message": f"Error al guardar rol de pago: {str(e)}"})
+            return json.dumps({"success": False, "message": f"Error al guardar rol y usuario: {str(e)}"})
 
     @Slot(float, result=str)
     @Slot(result=str)
