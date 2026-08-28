@@ -284,32 +284,26 @@ class DatabaseManager:
     def _seed_initial_users(self, cursor):
         import hashlib
         p1 = hashlib.sha256('admin123'.encode()).hexdigest()
-        p2 = hashlib.sha256('compras123'.encode()).hexdigest()
-        p3 = hashlib.sha256('contador123'.encode()).hexdigest()
 
         cursor.execute("""
         INSERT INTO usuarios (username, password_hash, nombre_completo, email, rol, activo) VALUES
-        ('admin', ?, 'Socio 1 - Administrador de Dinero', 'socio1@inego.com', 'Administrador de Dinero', 1),
+        ('admin', ?, 'Administrador General del Sistema', 'admin@inego.com', 'Administrador', 1),
+        ('admindinero', ?, 'Socio 1 - Administrador de Dinero', 'socio1@inego.com', 'Administrador de Dinero', 1),
         ('compras', ?, 'Socio 2 - Compras y Mercadería', 'socio2@inego.com', 'Compras y Mercadería', 1),
         ('contador', ?, 'Socio 3 - Proceso Contable', 'socio3@inego.com', 'Contabilidad', 1);
-        """, (p1, p2, p3))
+        """, (p1, p1, p1, p1))
 
     def _seed_initial_data(self, cursor):
         import hashlib
-        # Hashes para contraseñas por defecto
-        # admin -> admin123
-        # compras -> compras123
-        # contador -> contador123
         p1 = hashlib.sha256('admin123'.encode()).hexdigest()
-        p2 = hashlib.sha256('compras123'.encode()).hexdigest()
-        p3 = hashlib.sha256('contador123'.encode()).hexdigest()
 
         cursor.execute("""
         INSERT INTO usuarios (username, password_hash, nombre_completo, email, rol, activo) VALUES
-        ('admin', ?, 'Socio 1 - Administrador de Dinero', 'socio1@inego.com', 'Administrador de Dinero', 1),
+        ('admin', ?, 'Administrador General del Sistema', 'admin@inego.com', 'Administrador', 1),
+        ('admindinero', ?, 'Socio 1 - Administrador de Dinero', 'socio1@inego.com', 'Administrador de Dinero', 1),
         ('compras', ?, 'Socio 2 - Compras y Mercadería', 'socio2@inego.com', 'Compras y Mercadería', 1),
         ('contador', ?, 'Socio 3 - Proceso Contable', 'socio3@inego.com', 'Contabilidad', 1);
-        """, (p1, p2, p3))
+        """, (p1, p1, p1, p1))
 
         cursor.execute("INSERT INTO categorias_proveedor (nombre, descripcion) VALUES ('Ferretería General', 'Herramientas y cuchillas'), ('Tecnología y Software', 'Licencias y equipos'), ('Suministros de Oficina', 'Papelería y consumibles');")
         

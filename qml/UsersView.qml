@@ -177,9 +177,9 @@ ScrollView {
                                 }
                             }
 
-                            // BOTÓN ACTIVAR / DESACTIVAR (PROTEGIDO PARA CUENTAS ADMIN)
+                            // BOTÓN ACTIVAR / DESACTIVAR (PROTEGIDO ÚNICAMENTE PARA LA CUENTA PRINCIPAL ADMIN)
                             Rectangle {
-                                visible: !(modelData.rol === "Administrador" || modelData.rol === "Administrador de Dinero" || modelData.username === "admin")
+                                visible: modelData.username !== "admin"
                                 height: 28
                                 width: 100
                                 radius: 6

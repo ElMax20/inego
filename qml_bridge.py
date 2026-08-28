@@ -907,10 +907,10 @@ class BackendBridge(QObject):
 
     @Slot(int, result=str)
     def toggleUserStatus(self, user_id):
-        """ Desactivar usuarios: El administrador no puede desactivarse a sí mismo ni a otras cuentas Admin """
+        """ Desactivar usuarios: La cuenta principal @admin no puede ser desactivada """
         target = db.fetch_one("SELECT * FROM usuarios WHERE id = %s", (user_id,))
-        if target and (target.get("username") == "admin" or target.get("rol") in ["Administrador", "Administrador de Dinero"]):
-            return json.dumps({"success": False, "message": "🚫 Acción denegada: La cuenta Administrador no puede ser desactivada."})
+        if target and target.get("username") == "admin":
+            return json.dumps({"success": False, "message": "🚫 Acción denegada: La cuenta Administrador principal (@admin) no puede ser desactivada."})
 
         db.execute_query("UPDATE usuarios SET activo = CASE WHEN activo = 1 THEN 0 ELSE 1 END WHERE id = %s", (user_id,))
         if self._current_user:
