@@ -3,7 +3,8 @@
 CONTROLADOR DE REPORTES Y EXPORTACIÓN A EXCEL - INEGO INDUSTRIAS CRM
 =============================================================================
 Arquitectura desacoplada: Lógica de negocio y generación de hojas de cálculo
-utilizando PySide6 (QObject, @Slot, Signal), pandas y openpyxl.
+utilizando PySide6 (QObject, @Slot, Signal) y openpyxl.
+Totalmente resiliente sin dependencia obligatoria de pandas.
 
 Requerimientos Implementados:
 - Reporte Diario de Ventas
@@ -17,7 +18,12 @@ import os
 import urllib.parse
 from datetime import datetime
 import calendar
-import pandas as pd
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -122,7 +128,6 @@ class ReportesController(QObject):
             col_letter = get_column_letter(col[0].column)
             max_len = 0
             for cell in col:
-                # Evitar que celdas combinadas de título distorsionen el ancho
                 if cell.coordinate in ws.merged_cells:
                     continue
                 val_str = str(cell.value or '')
@@ -142,8 +147,7 @@ class ReportesController(QObject):
     def exportarReporteDiario(self, fecha_str: str, ruta_destino: str):
         """
         Genera el listado detallado de transacciones de ventas ejecutadas en
-        una fecha específica (ID transacción, hora, cliente, método de pago,
-        ítems/subtotal, total).
+        una fecha específica.
         """
         try:
             ruta_final = self._sanitizar_ruta(ruta_destino)
@@ -158,7 +162,6 @@ class ReportesController(QObject):
                 self.exportError.emit("⚠️ Formato de fecha inválido. Utilice YYYY-MM-DD.")
                 return
 
-            # Consulta unificada de transacciones (órdenes de venta y cotizaciones/ventas)
             query_diario = """
                 SELECT 
                     ov.numero_orden AS id_transaccion,
@@ -206,21 +209,21 @@ class ReportesController(QObject):
                   AND c.id NOT IN (SELECT cotizacion_id FROM ordenes_venta WHERE cotizacion_id IS NOT NULL)
                 ORDER BY hora ASC
             """
-            filas = db.fetch_all(query_diario, (fecha_limpia, fecha_limpia))
+            filas = db.fetch_all(query_diario, (fecha_limpia, fecha_limpia)) or []
 
-            # Estructurar mediante pandas
-            df = pd.DataFrame(filas)
-            if df.empty:
-                df = pd.DataFrame(columns=[
-                    'id_transaccion', 'hora', 'cliente', 'metodo_pago',
-                    'detalle_items', 'subtotal', 'iva', 'total'
-                ])
+            registros = []
+            for r in filas:
+                registros.append({
+                    'id_transaccion': r.get('id_transaccion') or 'N/A',
+                    'hora': r.get('hora') or '--:--',
+                    'cliente': r.get('cliente') or 'Consumidor Final',
+                    'metodo_pago': r.get('metodo_pago') or 'Efectivo',
+                    'detalle_items': r.get('detalle_items') or 'Sin desglose',
+                    'subtotal': float(r.get('subtotal') or 0.0),
+                    'iva': float(r.get('iva') or 0.0),
+                    'total': float(r.get('total') or 0.0)
+                })
 
-            df['subtotal'] = pd.to_numeric(df['subtotal'], errors='coerce').fillna(0.0)
-            df['iva'] = pd.to_numeric(df['iva'], errors='coerce').fillna(0.0)
-            df['total'] = pd.to_numeric(df['total'], errors='coerce').fillna(0.0)
-
-            # Construcción de Workbook con openpyxl
             wb = openpyxl.Workbook()
             ws = wb.active
             ws.title = "Reporte Diario"
@@ -245,11 +248,10 @@ class ReportesController(QObject):
             s_cell.alignment = Alignment(horizontal="center", vertical="center")
             ws.row_dimensions[2].height = 20
 
-            # Bloque de KPIs (Resumen rápido)
-            tot_transacciones = len(df)
-            subtotal_dia = float(df['subtotal'].sum())
-            iva_dia = float(df['iva'].sum())
-            total_dia = float(df['total'].sum())
+            # Bloque de KPIs
+            tot_transacciones = len(registros)
+            subtotal_dia = sum(r['subtotal'] for r in registros)
+            total_dia = sum(r['total'] for r in registros)
 
             ws.cell(row=4, column=2, value="Transacciones:").font = estilos["bold_font"]
             ws.cell(row=4, column=3, value=tot_transacciones).font = estilos["kpi_num_font"]
@@ -263,7 +265,7 @@ class ReportesController(QObject):
             c_tot_kpi.number_format = "$#,##0.00"
             ws.row_dimensions[4].height = 24
 
-            # Cabecera de la tabla de datos
+            # Cabecera de la tabla
             headers = [
                 "ID Transacción", "Hora", "Cliente / Razón Social", "Método de Pago",
                 "Ítems y Detalle", "Subtotal ($)", "IVA 15% ($)", "Total USD ($)"
@@ -280,7 +282,7 @@ class ReportesController(QObject):
 
             current_r = header_row + 1
 
-            if df.empty:
+            if not registros:
                 ws.merge_cells(f"A{current_r}:H{current_r}")
                 empty_cell = ws.cell(row=current_r, column=1, value="No se registraron transacciones comerciales en la fecha especificada.")
                 empty_cell.font = estilos["subtitle_font"]
@@ -288,46 +290,46 @@ class ReportesController(QObject):
                 ws.row_dimensions[current_r].height = 28
                 current_r += 1
             else:
-                for idx, row in df.iterrows():
+                for idx, row in enumerate(registros):
                     ws.row_dimensions[current_r].height = 22
-                    c_id = ws.cell(row=current_r, column=1, value=str(row['id_transaccion'] or 'N/A'))
+                    c_id = ws.cell(row=current_r, column=1, value=str(row['id_transaccion']))
                     c_id.alignment = Alignment(horizontal="center", vertical="center")
                     c_id.border = estilos["thin_border"]
                     c_id.font = estilos["bold_font"]
 
-                    c_hora = ws.cell(row=current_r, column=2, value=str(row['hora'] or '--:--'))
+                    c_hora = ws.cell(row=current_r, column=2, value=str(row['hora']))
                     c_hora.alignment = Alignment(horizontal="center", vertical="center")
                     c_hora.border = estilos["thin_border"]
                     c_hora.font = estilos["regular_font"]
 
-                    c_cli = ws.cell(row=current_r, column=3, value=str(row['cliente'] or 'Consumidor Final'))
+                    c_cli = ws.cell(row=current_r, column=3, value=str(row['cliente']))
                     c_cli.alignment = Alignment(horizontal="left", vertical="center")
                     c_cli.border = estilos["thin_border"]
                     c_cli.font = estilos["regular_font"]
 
-                    c_met = ws.cell(row=current_r, column=4, value=str(row['metodo_pago'] or 'Efectivo'))
+                    c_met = ws.cell(row=current_r, column=4, value=str(row['metodo_pago']))
                     c_met.alignment = Alignment(horizontal="center", vertical="center")
                     c_met.border = estilos["thin_border"]
                     c_met.font = estilos["regular_font"]
 
-                    c_det = ws.cell(row=current_r, column=5, value=str(row['detalle_items'] or 'Sin desglose'))
+                    c_det = ws.cell(row=current_r, column=5, value=str(row['detalle_items']))
                     c_det.alignment = Alignment(horizontal="left", vertical="center")
                     c_det.border = estilos["thin_border"]
                     c_det.font = estilos["regular_font"]
 
-                    c_sub = ws.cell(row=current_r, column=6, value=float(row['subtotal']))
+                    c_sub = ws.cell(row=current_r, column=6, value=row['subtotal'])
                     c_sub.alignment = Alignment(horizontal="right", vertical="center")
                     c_sub.border = estilos["thin_border"]
                     c_sub.font = estilos["regular_font"]
                     c_sub.number_format = "$#,##0.00"
 
-                    c_iva = ws.cell(row=current_r, column=7, value=float(row['iva']))
+                    c_iva = ws.cell(row=current_r, column=7, value=row['iva'])
                     c_iva.alignment = Alignment(horizontal="right", vertical="center")
                     c_iva.border = estilos["thin_border"]
                     c_iva.font = estilos["regular_font"]
                     c_iva.number_format = "$#,##0.00"
 
-                    c_tot = ws.cell(row=current_r, column=8, value=float(row['total']))
+                    c_tot = ws.cell(row=current_r, column=8, value=row['total'])
                     c_tot.alignment = Alignment(horizontal="right", vertical="center")
                     c_tot.border = estilos["thin_border"]
                     c_tot.font = estilos["bold_font"]
@@ -392,7 +394,7 @@ class ReportesController(QObject):
     def exportarReporteMensual(self, mes, anio, ruta_destino: str):
         """
         Exporta a Excel el consolidado acumulado de ventas e ingresos del mes
-        con resumen por días/semanas y métricas clave.
+        con resumen por días y métricas clave.
         """
         try:
             ruta_final = self._sanitizar_ruta(ruta_destino)
@@ -412,7 +414,6 @@ class ReportesController(QObject):
             fecha_fin = f"{anio_int:04d}-{mes_int:02d}-{ultimo_dia:02d}"
             nombre_mes = calendar.month_name[mes_int].capitalize()
 
-            # Consulta unificada de ventas del mes (órdenes de venta y cotizaciones)
             query_mes_unificado = """
                 SELECT 
                     date(ov.fecha_orden) AS fecha,
@@ -442,28 +443,36 @@ class ReportesController(QObject):
                   AND c.id NOT IN (SELECT cotizacion_id FROM ordenes_venta WHERE cotizacion_id IS NOT NULL)
                 ORDER BY fecha ASC
             """
-            filas = db.fetch_all(query_mes_unificado, (fecha_inicio, fecha_fin, fecha_inicio, fecha_fin))
+            filas = db.fetch_all(query_mes_unificado, (fecha_inicio, fecha_fin, fecha_inicio, fecha_fin)) or []
 
-            df = pd.DataFrame(filas)
-            if df.empty:
-                df = pd.DataFrame(columns=['fecha', 'numero_orden', 'cliente', 'tipo_cliente', 'subtotal', 'iva', 'total'])
+            registros = []
+            diario_map = {}
+            for r in filas:
+                f_str = str(r.get('fecha') or '')
+                sb = float(r.get('subtotal') or 0.0)
+                iv = float(r.get('iva') or 0.0)
+                tot = float(r.get('total') or 0.0)
 
-            df['subtotal'] = pd.to_numeric(df['subtotal'], errors='coerce').fillna(0.0)
-            df['iva'] = pd.to_numeric(df['iva'], errors='coerce').fillna(0.0)
-            df['total'] = pd.to_numeric(df['total'], errors='coerce').fillna(0.0)
+                rec = {
+                    'fecha': f_str,
+                    'numero_orden': r.get('numero_orden') or 'N/A',
+                    'cliente': r.get('cliente') or 'Consumidor Final',
+                    'tipo_cliente': r.get('tipo_cliente') or 'B2C',
+                    'subtotal': sb,
+                    'iva': iv,
+                    'total': tot
+                }
+                registros.append(rec)
 
-            # Agrupación diaria con pandas
-            if not df.empty:
-                df_diario = df.groupby('fecha').agg(
-                    transacciones=('numero_orden', 'count'),
-                    subtotal=('subtotal', 'sum'),
-                    iva=('iva', 'sum'),
-                    total=('total', 'sum')
-                ).reset_index()
-            else:
-                df_diario = pd.DataFrame(columns=['fecha', 'transacciones', 'subtotal', 'iva', 'total'])
+                if f_str not in diario_map:
+                    diario_map[f_str] = {'fecha': f_str, 'transacciones': 0, 'subtotal': 0.0, 'iva': 0.0, 'total': 0.0}
+                diario_map[f_str]['transacciones'] += 1
+                diario_map[f_str]['subtotal'] += sb
+                diario_map[f_str]['iva'] += iv
+                diario_map[f_str]['total'] += tot
 
-            # Construcción de Workbook
+            list_diario = sorted(diario_map.values(), key=lambda x: x['fecha'])
+
             wb = openpyxl.Workbook()
             ws1 = wb.active
             ws1.title = "Consolidado Mensual"
@@ -487,20 +496,18 @@ class ReportesController(QObject):
             s_cell.alignment = Alignment(horizontal="center", vertical="center")
             ws1.row_dimensions[2].height = 20
 
-            # Tarjetas de Métricas Clave (KPIs)
-            tot_tx = int(df['numero_orden'].count())
-            tot_sub = float(df['subtotal'].sum())
-            tot_iva = float(df['iva'].sum())
-            tot_neto = float(df['total'].sum())
+            # Tarjetas KPIs
+            tot_tx = len(registros)
+            tot_sub = sum(r['subtotal'] for r in registros)
+            tot_iva = sum(r['iva'] for r in registros)
+            tot_neto = sum(r['total'] for r in registros)
 
             ws1.cell(row=4, column=1, value="MÉTRICAS CLAVE DEL MES:").font = estilos["bold_font"]
-            
             kpi_labels = ["Total Transacciones:", "Subtotal Acumulado:", "IVA 15% Acumulado:", "Ingreso Neto Total:"]
             kpi_values = [tot_tx, tot_sub, tot_iva, tot_neto]
             
             for i, (lbl, val) in enumerate(zip(kpi_labels, kpi_values), start=1):
-                cell_lbl = ws1.cell(row=5, column=i+1 if i > 1 else 2, value=lbl)
-                cell_lbl.font = estilos["bold_font"]
+                ws1.cell(row=5, column=i+1 if i > 1 else 2, value=lbl).font = estilos["bold_font"]
                 cell_val = ws1.cell(row=6, column=i+1 if i > 1 else 2, value=val)
                 cell_val.font = estilos["kpi_num_font"]
                 if i > 1:
@@ -519,24 +526,27 @@ class ReportesController(QObject):
                 cell.border = estilos["thin_border"]
 
             curr_r = 10
-            if df_diario.empty:
+            if not list_diario:
                 ws1.merge_cells(f"A{curr_r}:F{curr_r}")
                 ws1.cell(row=curr_r, column=1, value="No se registraron ventas en este mes.").font = estilos["subtitle_font"]
                 curr_r += 1
             else:
-                for idx, r in df_diario.iterrows():
-                    fecha_obj = datetime.strptime(str(r['fecha']), "%Y-%m-%d")
-                    dia_semana = fecha_obj.strftime("%A")
+                for idx, r in enumerate(list_diario):
+                    try:
+                        fecha_obj = datetime.strptime(str(r['fecha']), "%Y-%m-%d")
+                        dia_semana = fecha_obj.strftime("%A")
+                    except Exception:
+                        dia_semana = "N/A"
 
                     ws1.cell(row=curr_r, column=1, value=str(r['fecha'])).alignment = Alignment(horizontal="center")
                     ws1.cell(row=curr_r, column=2, value=dia_semana).alignment = Alignment(horizontal="center")
-                    ws1.cell(row=curr_r, column=3, value=int(r['transacciones'])).alignment = Alignment(horizontal="center")
+                    ws1.cell(row=curr_r, column=3, value=r['transacciones']).alignment = Alignment(horizontal="center")
                     
-                    c_sub = ws1.cell(row=curr_r, column=4, value=float(r['subtotal']))
+                    c_sub = ws1.cell(row=curr_r, column=4, value=r['subtotal'])
                     c_sub.number_format = "$#,##0.00"
-                    c_iva = ws1.cell(row=curr_r, column=5, value=float(r['iva']))
+                    c_iva = ws1.cell(row=curr_r, column=5, value=r['iva'])
                     c_iva.number_format = "$#,##0.00"
-                    c_tot = ws1.cell(row=curr_r, column=6, value=float(r['total']))
+                    c_tot = ws1.cell(row=curr_r, column=6, value=r['total'])
                     c_tot.number_format = "$#,##0.00"
                     c_tot.font = estilos["bold_font"]
 
@@ -547,7 +557,6 @@ class ReportesController(QObject):
 
                     curr_r += 1
 
-                # Totales del mes
                 ws1.merge_cells(f"A{curr_r}:B{curr_r}")
                 ws1.cell(row=curr_r, column=1, value="TOTAL DEL MES:").alignment = Alignment(horizontal="right")
                 ws1.cell(row=curr_r, column=1).font = estilos["bold_font"]
@@ -571,7 +580,7 @@ class ReportesController(QObject):
 
             self._ajustar_anchos_columna(ws1)
 
-            # Hoja 2: Detalle completo de cada venta del mes
+            # Hoja 2: Detalle completo
             ws2 = wb.create_sheet(title="Transacciones Detalladas")
             ws2.views.sheetView[0].showGridLines = True
             
@@ -583,18 +592,18 @@ class ReportesController(QObject):
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = estilos["thin_border"]
 
-            for idx, r in df.iterrows():
+            for idx, r in enumerate(registros):
                 row_idx = idx + 2
                 ws2.cell(row=row_idx, column=1, value=str(r['fecha'])).alignment = Alignment(horizontal="center")
                 ws2.cell(row=row_idx, column=2, value=str(r['numero_orden'])).alignment = Alignment(horizontal="center")
                 ws2.cell(row=row_idx, column=3, value=str(r['cliente']))
                 ws2.cell(row=row_idx, column=4, value=str(r['tipo_cliente'])).alignment = Alignment(horizontal="center")
                 
-                c_s = ws2.cell(row=row_idx, column=5, value=float(r['subtotal']))
+                c_s = ws2.cell(row=row_idx, column=5, value=r['subtotal'])
                 c_s.number_format = "$#,##0.00"
-                c_i = ws2.cell(row=row_idx, column=6, value=float(r['iva']))
+                c_i = ws2.cell(row=row_idx, column=6, value=r['iva'])
                 c_i.number_format = "$#,##0.00"
-                c_t = ws2.cell(row=row_idx, column=7, value=float(r['total']))
+                c_t = ws2.cell(row=row_idx, column=7, value=r['total'])
                 c_t.number_format = "$#,##0.00"
                 c_t.font = estilos["bold_font"]
 
@@ -621,8 +630,7 @@ class ReportesController(QObject):
     @Slot(str, str, str)
     def exportarReporteRango(self, fecha_inicio: str, fecha_fin: str, ruta_destino: str):
         """
-        Genera reporte comercial de ventas filtrado estrictamente por el
-        intervalo [fecha_inicio, fecha_fin] con validación básica.
+        Genera reporte comercial de ventas filtrado por el intervalo [fecha_inicio, fecha_fin].
         """
         try:
             ruta_final = self._sanitizar_ruta(ruta_destino)
@@ -644,7 +652,6 @@ class ReportesController(QObject):
                 self.exportError.emit("⚠️ La fecha inicial no puede ser posterior a la fecha final.")
                 return
 
-            # Consulta unificada por rango de fechas (órdenes de venta y cotizaciones/ventas)
             query_rango_unificado = """
                 SELECT 
                     date(ov.fecha_orden) AS fecha,
@@ -696,18 +703,22 @@ class ReportesController(QObject):
                   AND c.id NOT IN (SELECT cotizacion_id FROM ordenes_venta WHERE cotizacion_id IS NOT NULL)
                 ORDER BY fecha ASC
             """
-            filas = db.fetch_all(query_rango_unificado, (f_ini_clean, f_fin_clean, f_ini_clean, f_fin_clean))
+            filas = db.fetch_all(query_rango_unificado, (f_ini_clean, f_fin_clean, f_ini_clean, f_fin_clean)) or []
 
-            df = pd.DataFrame(filas)
-            if df.empty:
-                df = pd.DataFrame(columns=[
-                    'fecha', 'numero_orden', 'cliente', 'tipo_cliente',
-                    'condicion_pago', 'estado', 'items', 'subtotal', 'iva', 'total'
-                ])
-
-            df['subtotal'] = pd.to_numeric(df['subtotal'], errors='coerce').fillna(0.0)
-            df['iva'] = pd.to_numeric(df['iva'], errors='coerce').fillna(0.0)
-            df['total'] = pd.to_numeric(df['total'], errors='coerce').fillna(0.0)
+            registros = []
+            for r in filas:
+                registros.append({
+                    'fecha': str(r.get('fecha') or ''),
+                    'numero_orden': str(r.get('numero_orden') or 'N/A'),
+                    'cliente': str(r.get('cliente') or 'Consumidor Final'),
+                    'tipo_cliente': str(r.get('tipo_cliente') or 'B2C'),
+                    'condicion_pago': str(r.get('condicion_pago') or 'Contado'),
+                    'estado': str(r.get('estado') or 'Completada'),
+                    'items': str(r.get('items') or 'Sin desglose'),
+                    'subtotal': float(r.get('subtotal') or 0.0),
+                    'iva': float(r.get('iva') or 0.0),
+                    'total': float(r.get('total') or 0.0)
+                })
 
             wb = openpyxl.Workbook()
             ws = wb.active
@@ -732,7 +743,6 @@ class ReportesController(QObject):
             s_cell.alignment = Alignment(horizontal="center", vertical="center")
             ws.row_dimensions[2].height = 20
 
-            # Tabla de cabeceras
             headers = [
                 "Fecha", "N° Comprobante", "Cliente", "Tipo", "Condición Pago",
                 "Estado", "Ítems Transaccionados", "Subtotal ($)", "IVA 15% ($)", "Total USD ($)"
@@ -747,25 +757,25 @@ class ReportesController(QObject):
                 cell.border = estilos["thin_border"]
 
             curr_r = 5
-            if df.empty:
+            if not registros:
                 ws.merge_cells(f"A{curr_r}:J{curr_r}")
                 ws.cell(row=curr_r, column=1, value="No se encontraron registros comerciales en el intervalo de fechas indicado.").font = estilos["subtitle_font"]
                 curr_r += 1
             else:
-                for idx, r in df.iterrows():
-                    ws.cell(row=curr_r, column=1, value=str(r['fecha'])).alignment = Alignment(horizontal="center")
-                    ws.cell(row=curr_r, column=2, value=str(r['numero_orden'])).alignment = Alignment(horizontal="center")
-                    ws.cell(row=curr_r, column=3, value=str(r['cliente']))
-                    ws.cell(row=curr_r, column=4, value=str(r['tipo_cliente'])).alignment = Alignment(horizontal="center")
-                    ws.cell(row=curr_r, column=5, value=str(r['condicion_pago'])).alignment = Alignment(horizontal="center")
-                    ws.cell(row=curr_r, column=6, value=str(r['estado'])).alignment = Alignment(horizontal="center")
-                    ws.cell(row=curr_r, column=7, value=str(r['items'] or 'Sin desglose'))
+                for idx, r in enumerate(registros):
+                    ws.cell(row=curr_r, column=1, value=r['fecha']).alignment = Alignment(horizontal="center")
+                    ws.cell(row=curr_r, column=2, value=r['numero_orden']).alignment = Alignment(horizontal="center")
+                    ws.cell(row=curr_r, column=3, value=r['cliente'])
+                    ws.cell(row=curr_r, column=4, value=r['tipo_cliente']).alignment = Alignment(horizontal="center")
+                    ws.cell(row=curr_r, column=5, value=r['condicion_pago']).alignment = Alignment(horizontal="center")
+                    ws.cell(row=curr_r, column=6, value=r['estado']).alignment = Alignment(horizontal="center")
+                    ws.cell(row=curr_r, column=7, value=r['items'])
 
-                    c_sub = ws.cell(row=curr_r, column=8, value=float(r['subtotal']))
+                    c_sub = ws.cell(row=curr_r, column=8, value=r['subtotal'])
                     c_sub.number_format = "$#,##0.00"
-                    c_iva = ws.cell(row=curr_r, column=9, value=float(r['iva']))
+                    c_iva = ws.cell(row=curr_r, column=9, value=r['iva'])
                     c_iva.number_format = "$#,##0.00"
-                    c_tot = ws.cell(row=curr_r, column=10, value=float(r['total']))
+                    c_tot = ws.cell(row=curr_r, column=10, value=r['total'])
                     c_tot.number_format = "$#,##0.00"
                     c_tot.font = estilos["bold_font"]
 
@@ -776,7 +786,6 @@ class ReportesController(QObject):
 
                     curr_r += 1
 
-                # Totales acumulados
                 ws.merge_cells(f"A{curr_r}:G{curr_r}")
                 ws.cell(row=curr_r, column=1, value="TOTAL DEL PERÍODO:").alignment = Alignment(horizontal="right")
                 ws.cell(row=curr_r, column=1).font = estilos["bold_font"]
@@ -821,7 +830,7 @@ class ReportesController(QObject):
     def exportarReporteCajaChica(self, fecha_inicio: str, fecha_fin: str, ruta_destino: str):
         """
         Exporta a Excel el desglose de gastos y salidas de caja chica agrupado
-        y subtotalizado por categoría (Suministros, Transporte, Servicios, etc.).
+        y subtotalizado por categoría.
         """
         try:
             ruta_final = self._sanitizar_ruta(ruta_destino)
@@ -843,7 +852,6 @@ class ReportesController(QObject):
                 self.exportError.emit("⚠️ La fecha inicial no puede ser posterior a la fecha final.")
                 return
 
-            # Consulta de egresos en la tabla de gastos
             query_gastos = """
                 SELECT 
                     id AS gasto_id,
@@ -857,28 +865,35 @@ class ReportesController(QObject):
                 WHERE date(fecha) >= date(%s) AND date(fecha) <= date(%s)
                 ORDER BY categoria ASC, fecha ASC
             """
-            filas = db.fetch_all(query_gastos, (f_ini_clean, f_fin_clean))
+            filas = db.fetch_all(query_gastos, (f_ini_clean, f_fin_clean)) or []
 
-            df = pd.DataFrame(filas)
-            if df.empty:
-                df = pd.DataFrame(columns=[
-                    'gasto_id', 'fecha', 'categoria', 'concepto',
-                    'monto', 'metodo_pago', 'registrado_por'
-                ])
+            registros = []
+            cat_map = {}
+            for r in filas:
+                c_nom = str(r.get('categoria') or 'Otros')
+                m_val = float(r.get('monto') or 0.0)
+                
+                rec = {
+                    'gasto_id': r.get('gasto_id') or 0,
+                    'fecha': str(r.get('fecha') or ''),
+                    'categoria': c_nom,
+                    'concepto': str(r.get('concepto') or ''),
+                    'monto': m_val,
+                    'metodo_pago': str(r.get('metodo_pago') or 'Efectivo'),
+                    'registrado_por': str(r.get('registrado_por') or 'Sistema')
+                }
+                registros.append(rec)
 
-            df['monto'] = pd.to_numeric(df['monto'], errors='coerce').fillna(0.0)
+                if c_nom not in cat_map:
+                    cat_map[c_nom] = {'categoria': c_nom, 'cantidad': 0, 'total_monto': 0.0}
+                cat_map[c_nom]['cantidad'] += 1
+                cat_map[c_nom]['total_monto'] += m_val
 
-            # Agrupación y subtotalización por categoría con pandas
-            total_general = float(df['monto'].sum())
-            if not df.empty and total_general > 0:
-                df_cat = df.groupby('categoria').agg(
-                    total_monto=('monto', 'sum'),
-                    cantidad=('gasto_id', 'count')
-                ).reset_index()
-                df_cat['porcentaje'] = (df_cat['total_monto'] / total_general) * 100.0
-                df_cat = df_cat.sort_values(by='total_monto', ascending=False)
-            else:
-                df_cat = pd.DataFrame(columns=['categoria', 'total_monto', 'cantidad', 'porcentaje'])
+            total_general = sum(r['monto'] for r in registros)
+
+            list_cat = sorted(cat_map.values(), key=lambda x: x['total_monto'], reverse=True)
+            for c in list_cat:
+                c['porcentaje'] = (c['total_monto'] / total_general * 100.0) if total_general > 0 else 0.0
 
             wb = openpyxl.Workbook()
             ws = wb.active
@@ -916,12 +931,12 @@ class ReportesController(QObject):
                 cell.border = estilos["thin_border"]
 
             curr_r = 6
-            if df_cat.empty:
+            if not list_cat:
                 ws.merge_cells(f"A{curr_r}:D{curr_r}")
                 ws.cell(row=curr_r, column=1, value="No se registraron salidas de caja chica en este período.").font = estilos["subtitle_font"]
                 curr_r += 1
             else:
-                for idx, r in df_cat.iterrows():
+                for idx, r in enumerate(list_cat):
                     ws.cell(row=curr_r, column=1, value=str(r['categoria'])).alignment = Alignment(horizontal="left")
                     ws.cell(row=curr_r, column=2, value=int(r['cantidad'])).alignment = Alignment(horizontal="center")
                     
@@ -977,11 +992,11 @@ class ReportesController(QObject):
             header_det_r = curr_r
             curr_r += 1
 
-            if df.empty:
+            if not registros:
                 ws.merge_cells(f"A{curr_r}:G{curr_r}")
                 ws.cell(row=curr_r, column=1, value="Sin movimientos.").font = estilos["subtitle_font"]
             else:
-                for idx, r in df.iterrows():
+                for idx, r in enumerate(registros):
                     ws.cell(row=curr_r, column=1, value=f"EGR-{int(r['gasto_id']):04d}").alignment = Alignment(horizontal="center")
                     ws.cell(row=curr_r, column=2, value=str(r['fecha'])).alignment = Alignment(horizontal="center")
                     ws.cell(row=curr_r, column=3, value=str(r['categoria']))
@@ -1001,7 +1016,6 @@ class ReportesController(QObject):
 
                     curr_r += 1
 
-                # Total al pie del desglose
                 ws.merge_cells(f"A{curr_r}:F{curr_r}")
                 ws.cell(row=curr_r, column=1, value="TOTAL GENERAL DE SALIDAS DETALLADAS:").alignment = Alignment(horizontal="right")
                 ws.cell(row=curr_r, column=1).font = estilos["bold_font"]
