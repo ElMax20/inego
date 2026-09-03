@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 ScrollView {
     id: expRoot
@@ -238,17 +239,34 @@ ScrollView {
                     width: expenseScroll.width - 20
                     spacing: 12
 
-                    Text { text: "Fecha de Registro (Automática):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
-                    TextField {
-                        id: expDate
+                    Text { text: "Fecha de Registro:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    Row {
                         width: parent.width
-                        color: theme.textSecondary
-                        readOnly: true
-                        text: Qt.formatDate(new Date(), "yyyy-MM-dd")
-                        background: Rectangle {
-                            color: theme.bgMain
-                            radius: 6
-                            border.color: theme.borderColor
+                        spacing: 6
+
+                        TextField {
+                            id: expDate
+                            width: parent.width - 40
+                            color: theme.textPrimary
+                            font.bold: true
+                            text: Qt.formatDate(new Date(), "yyyy-MM-dd")
+                            background: Rectangle {
+                                color: theme.bgMain
+                                radius: 6
+                                border.color: theme.borderColor
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: calendarPopup.openFor(expDate)
+                            }
+                        }
+
+                        Button {
+                            width: 34
+                            height: 34
+                            contentItem: Text { text: "📅"; font.pixelSize: 13; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            background: Rectangle { color: theme.colorBronze; radius: 6 }
+                            onClicked: calendarPopup.openFor(expDate)
                         }
                     }
 
@@ -509,6 +527,231 @@ ScrollView {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: expErrDialog.close()
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // CALENDARIO MODAL REUTILIZABLE (SELECCIÓN VISUAL INTERACTIVA DE FECHA)
+    // =========================================================================
+    Popup {
+        id: calendarPopup
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        width: 320
+        height: 350
+        padding: 14
+
+        property var targetTextField: null
+        property int currentYear: new Date().getFullYear()
+        property int currentMonth: new Date().getMonth()
+        property int selectedDay: new Date().getDate()
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        function openFor(textField) {
+            targetTextField = textField
+            if (textField && textField.text) {
+                var parts = textField.text.trim().split("-")
+                if (parts.length === 3) {
+                    var y = parseInt(parts[0])
+                    var m = parseInt(parts[1]) - 1
+                    var d = parseInt(parts[2])
+                    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                        currentYear = y
+                        currentMonth = m
+                        selectedDay = d
+                    }
+                }
+            }
+            calendarPopup.open()
+        }
+
+        readonly property var monthNames: [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+
+        function daysInMonth(m, y) {
+            return new Date(y, m + 1, 0).getDate()
+        }
+
+        function startDayOfWeek(m, y) {
+            return new Date(y, m, 1).getDay()
+        }
+
+        contentItem: Column {
+            anchors.fill: parent
+            spacing: 8
+
+            Row {
+                width: parent.width
+                height: 32
+                spacing: 6
+
+                Button {
+                    width: 32
+                    height: 32
+                    contentItem: Text { text: "◀"; color: theme.textPrimary; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    onClicked: {
+                        if (calendarPopup.currentMonth === 0) {
+                            calendarPopup.currentMonth = 11
+                            calendarPopup.currentYear--
+                        } else {
+                            calendarPopup.currentMonth--
+                        }
+                    }
+                }
+
+                Item { Layout.fillWidth: true; width: 1; height: 1 }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: calendarPopup.monthNames[calendarPopup.currentMonth] + " " + calendarPopup.currentYear
+                    font.pixelSize: 13
+                    font.bold: true
+                    color: theme.colorBronze
+                }
+
+                Item { Layout.fillWidth: true; width: 1; height: 1 }
+
+                Button {
+                    width: 32
+                    height: 32
+                    contentItem: Text { text: "▶"; color: theme.textPrimary; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    onClicked: {
+                        if (calendarPopup.currentMonth === 11) {
+                            calendarPopup.currentMonth = 0
+                            calendarPopup.currentYear++
+                        } else {
+                            calendarPopup.currentMonth++
+                        }
+                    }
+                }
+            }
+
+            Row {
+                width: parent.width
+                height: 22
+
+                Repeater {
+                    model: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+                    delegate: Item {
+                        width: (calendarPopup.width - 28) / 7
+                        height: 22
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData
+                            font.pixelSize: 10
+                            font.bold: true
+                            color: theme.textMuted
+                        }
+                    }
+                }
+            }
+
+            Grid {
+                columns: 7
+                spacing: 2
+                width: parent.width
+
+                Repeater {
+                    model: 42
+                    delegate: Item {
+                        width: (calendarPopup.width - 28 - 12) / 7
+                        height: 28
+
+                        property int offset: calendarPopup.startDayOfWeek(calendarPopup.currentMonth, calendarPopup.currentYear)
+                        property int dayNum: index - offset + 1
+                        property bool isValidDay: dayNum >= 1 && dayNum <= calendarPopup.daysInMonth(calendarPopup.currentMonth, calendarPopup.currentYear)
+                        property bool isSelected: isValidDay && dayNum === calendarPopup.selectedDay
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 6
+                            visible: parent.isValidDay
+                            color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse ? theme.bgMain : "transparent")
+                            border.color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse ? theme.borderColor : "transparent")
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: parent.parent.isValidDay ? parent.parent.dayNum : ""
+                                font.pixelSize: 11
+                                font.bold: parent.parent.isSelected
+                                color: parent.parent.isSelected ? "#FFFFFF" : theme.textPrimary
+                            }
+
+                            MouseArea {
+                                id: dayMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    if (parent.parent.isValidDay) {
+                                        calendarPopup.selectedDay = parent.parent.dayNum
+                                        var m = calendarPopup.currentMonth + 1
+                                        var mm = m < 10 ? "0" + m : "" + m
+                                        var dd = parent.parent.dayNum < 10 ? "0" + parent.parent.dayNum : "" + parent.parent.dayNum
+                                        var formattedDate = calendarPopup.currentYear + "-" + mm + "-" + dd
+
+                                        if (calendarPopup.targetTextField) {
+                                            calendarPopup.targetTextField.text = formattedDate
+                                        }
+                                        calendarPopup.close()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item { Layout.fillHeight: true; width: 1; height: 1 }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
+
+                Button {
+                    width: 100
+                    height: 28
+                    contentItem: Text { text: "📅 Ir a Hoy"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: {
+                        var now = new Date()
+                        calendarPopup.currentYear = now.getFullYear()
+                        calendarPopup.currentMonth = now.getMonth()
+                        calendarPopup.selectedDay = now.getDate()
+
+                        var m = calendarPopup.currentMonth + 1
+                        var mm = m < 10 ? "0" + m : "" + m
+                        var dd = calendarPopup.selectedDay < 10 ? "0" + calendarPopup.selectedDay : "" + calendarPopup.selectedDay
+                        var formattedDate = calendarPopup.currentYear + "-" + mm + "-" + dd
+
+                        if (calendarPopup.targetTextField) {
+                            calendarPopup.targetTextField.text = formattedDate
+                        }
+                        calendarPopup.close()
+                    }
+                }
+
+                Button {
+                    width: 80
+                    height: 28
+                    contentItem: Text { text: "Cancelar"; color: theme.textMuted; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
+                    onClicked: calendarPopup.close()
                 }
             }
         }
