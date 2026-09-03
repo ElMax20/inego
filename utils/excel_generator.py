@@ -49,8 +49,10 @@ def export_sales_to_excel(date_from=None, date_to=None, output_path=None):
     ws.row_dimensions[2].height = 20
 
     headers = [
-        "N° Cotización", "Fecha Emisión", "Cliente", "Tipo Cliente",
-        "Días Crédito", "Estado", "Subtotal ($)", "Total USD ($)"
+        "N° Cotización", "Fecha Emisión", "Cliente / Razón Social", "RUC / Cédula", "Tipo Cliente",
+        "Días Crédito", "Estado", "Aplica Retención SRI", "Producto / Ítem (Lista Desglosada)",
+        "Cant.", "P. Unit ($)", "Subtotal Ítem ($)", "Subtotal Trans. ($)", "IVA 15% ($)",
+        "Total Facturado ($)", "Ret. IR 1.75% ($)", "Ret. IVA 30% ($)", "Total Retenciones ($)", "Valor Neto a Cobrar ($)"
     ]
     ws.row_dimensions[4].height = 28
 
@@ -59,12 +61,12 @@ def export_sales_to_excel(date_from=None, date_to=None, output_path=None):
         cell.value = header_title
         cell.font = header_font
         cell.fill = blue_header_fill
-        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         cell.border = thin_border
 
     query = """
-        SELECT c.numero_cotizacion, c.fecha_emision, cl.razon_social_nombre, 
-               cl.tipo_cliente, cl.dias_credito, c.estado, c.subtotal, c.total
+        SELECT c.id AS cotizacion_id, c.numero_cotizacion, c.fecha_emision, cl.razon_social_nombre, 
+               cl.ruc_cedula, cl.tipo_cliente, cl.dias_credito, c.estado, c.subtotal, c.iva, c.total
         FROM cotizaciones c
         JOIN clientes cl ON c.cliente_id = cl.id
     """
@@ -83,48 +85,126 @@ def export_sales_to_excel(date_from=None, date_to=None, output_path=None):
 
     records = db.fetch_all(query, tuple(params))
     current_row = 5
-    total_acumulado = 0.0
+
+    def _calc_ret(ruc_ced, sub, iv):
+        doc = str(ruc_ced or '').strip()
+        is_ruc = len(doc) == 13 and doc.isdigit()
+        if is_ruc:
+            r_ir = round(sub * 0.0175, 2)
+            r_iva = round(iv * 0.30, 2)
+            tot_r = round(r_ir + r_iva, 2)
+            ap_txt = "Sí (RUC 13 dígitos)"
+        else:
+            r_ir = 0.0
+            r_iva = 0.0
+            tot_r = 0.0
+            ap_txt = "No (Cédula / N/A)"
+        tf = round(sub + iv, 2)
+        nc = round(tf - tot_r, 2)
+        return {'is_ruc': is_ruc, 'ap_txt': ap_txt, 'r_ir': r_ir, 'r_iva': r_iva, 'tot_r': tot_r, 'tf': tf, 'nc': nc}
 
     for idx, r in enumerate(records):
-        ws.cell(row=current_row, column=1, value=r["numero_cotizacion"]).alignment = Alignment(horizontal="center")
-        ws.cell(row=current_row, column=2, value=str(r["fecha_emision"])).alignment = Alignment(horizontal="center")
-        ws.cell(row=current_row, column=3, value=r["razon_social_nombre"])
-        ws.cell(row=current_row, column=4, value=r["tipo_cliente"]).alignment = Alignment(horizontal="center")
-        ws.cell(row=current_row, column=5, value=f"{r['dias_credito']} días" if r["tipo_cliente"] == "B2B" else "0 (Contado)").alignment = Alignment(horizontal="center")
-        ws.cell(row=current_row, column=6, value=r["estado"]).alignment = Alignment(horizontal="center")
-        
-        sub_c = ws.cell(row=current_row, column=7, value=float(r["subtotal"]))
-        sub_c.number_format = '$#,##0.00'
-        
-        tot_c = ws.cell(row=current_row, column=8, value=float(r["total"]))
-        tot_c.number_format = '$#,##0.00'
-        
-        total_acumulado += float(r["total"])
+        sb = float(r["subtotal"] or 0.0)
+        iv = float(r["iva"] or 0.0)
+        ret = _calc_ret(r["ruc_cedula"], sb, iv)
 
-        fill_to_use = zebra_fill if idx % 2 == 1 else None
-        for col_i in range(1, 9):
-            c = ws.cell(row=current_row, column=col_i)
-            c.font = regular_font
-            c.border = thin_border
-            if fill_to_use:
-                c.fill = fill_to_use
+        items_rows = db.fetch_all("""
+            SELECT cd.cantidad, cd.precio_venta_unitario, cd.subtotal_linea, p.codigo, p.nombre
+            FROM cotizacion_detalles cd
+            JOIN productos p ON cd.producto_id = p.id
+            WHERE cd.cotizacion_id = %s
+        """, (r["cotizacion_id"],)) or []
 
-        current_row += 1
+        if not items_rows:
+            items_rows = [{'cantidad': 1, 'precio_venta_unitario': sb, 'subtotal_linea': sb, 'codigo': 'PROD-GEN', 'nombre': 'Ítem Comercial General'}]
 
-    ws.row_dimensions[current_row].height = 25
-    ws.cell(row=current_row, column=6, value="TOTAL GENERAL:").font = bold_font
-    ws.cell(row=current_row, column=6).alignment = Alignment(horizontal="right", vertical="center")
-    
-    tot_final = ws.cell(row=current_row, column=8, value=total_acumulado)
-    tot_final.font = bold_font
-    tot_final.number_format = '$#,##0.00'
-    tot_final.border = thin_border
-    tot_final.fill = PatternFill(start_color="E0F2FE", end_color="E0F2FE", fill_type="solid")
+        for item in items_rows:
+            ws.row_dimensions[current_row].height = 22
+            ws.cell(row=current_row, column=1, value=r["numero_cotizacion"]).alignment = Alignment(horizontal="center")
+            ws.cell(row=current_row, column=2, value=str(r["fecha_emision"])).alignment = Alignment(horizontal="center")
+            ws.cell(row=current_row, column=3, value=r["razon_social_nombre"])
+            ws.cell(row=current_row, column=4, value=r["ruc_cedula"] or "Consumidor Final").alignment = Alignment(horizontal="center")
+            ws.cell(row=current_row, column=5, value=r["tipo_cliente"]).alignment = Alignment(horizontal="center")
+            ws.cell(row=current_row, column=6, value=f"{r['dias_credito']} días" if r["tipo_cliente"] == "B2B" else "0 (Contado)").alignment = Alignment(horizontal="center")
+            ws.cell(row=current_row, column=7, value=r["estado"]).alignment = Alignment(horizontal="center")
+            ws.cell(row=current_row, column=8, value=ret["ap_txt"]).alignment = Alignment(horizontal="center")
+
+            ws.cell(row=current_row, column=9, value=f"• {item['nombre']} ({item['codigo']})").alignment = Alignment(horizontal="left")
+            ws.cell(row=current_row, column=10, value=item['cantidad']).alignment = Alignment(horizontal="center")
+            
+            c_pu = ws.cell(row=current_row, column=11, value=float(item['precio_venta_unitario']))
+            c_pu.number_format = '$#,##0.00'
+            
+            c_si = ws.cell(row=current_row, column=12, value=float(item['subtotal_linea']))
+            c_si.number_format = '$#,##0.00'
+
+            c_sub = ws.cell(row=current_row, column=13, value=sb)
+            c_sub.number_format = '$#,##0.00'
+
+            c_iva = ws.cell(row=current_row, column=14, value=iv)
+            c_iva.number_format = '$#,##0.00'
+
+            c_tot = ws.cell(row=current_row, column=15, value=ret["tf"])
+            c_tot.number_format = '$#,##0.00'
+
+            c_rir = ws.cell(row=current_row, column=16, value=ret["r_ir"])
+            c_rir.number_format = '$#,##0.00'
+
+            c_riva = ws.cell(row=current_row, column=17, value=ret["r_iva"])
+            c_riva.number_format = '$#,##0.00'
+
+            c_tret = ws.cell(row=current_row, column=18, value=ret["tot_r"])
+            c_tret.number_format = '$#,##0.00'
+            if ret['is_ruc']:
+                c_tret.font = Font(name="Calibri", size=11, bold=True, color="C2410C")
+
+            c_net = ws.cell(row=current_row, column=19, value=ret["nc"])
+            c_net.number_format = '$#,##0.00'
+            c_net.font = bold_font
+
+            fill_to_use = zebra_fill if idx % 2 == 1 else None
+            for col_i in range(1, 20):
+                c = ws.cell(row=current_row, column=col_i)
+                c.border = thin_border
+                if fill_to_use:
+                    c.fill = fill_to_use
+
+            current_row += 1
+
+    ws.row_dimensions[current_row].height = 26
+    ws.merge_cells(f"A{current_row}:L{current_row}")
+    tot_lbl = ws.cell(row=current_row, column=1, value="TOTAL GENERAL:")
+    tot_lbl.font = bold_font
+    tot_lbl.alignment = Alignment(horizontal="right", vertical="center")
+
+    for col_k in range(1, 13):
+        ws.cell(row=current_row, column=col_k).border = thin_border
+        ws.cell(row=current_row, column=col_k).fill = PatternFill(start_color="E0F2FE", end_color="E0F2FE", fill_type="solid")
+
+    col_map_sales = {
+        13: f"=SUM(M5:M{current_row-1})",  # Subtotal Trans.
+        14: f"=SUM(N5:N{current_row-1})",  # IVA 15%
+        15: f"=SUM(O5:O{current_row-1})",  # Total Facturado
+        16: f"=SUM(P5:P{current_row-1})",  # Ret IR 1.75%
+        17: f"=SUM(Q5:Q{current_row-1})",  # Ret IVA 30%
+        18: f"=SUM(R5:R{current_row-1})",  # Total Retenciones
+        19: f"=SUM(S5:S{current_row-1})"   # Neto a Cobrar
+    }
+
+    for col_idx, formula in col_map_sales.items():
+        c_tot_final = ws.cell(row=current_row, column=col_idx, value=formula)
+        c_tot_final.font = bold_font
+        c_tot_final.number_format = '$#,##0.00'
+        c_tot_final.border = thin_border
+        c_tot_final.fill = PatternFill(start_color="E0F2FE", end_color="E0F2FE", fill_type="solid")
 
     for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
+        max_len = 0
+        for cell in col:
+            val_s = str(cell.value or '')
+            max_len = max(max_len, len(val_s))
         col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 13)
 
     wb.save(output_path)
     return output_path

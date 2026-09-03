@@ -105,12 +105,35 @@ def generate_quote_pdf(quote_id, output_path=None):
     iva = float(quote['iva'])
     total = float(quote['total'])
 
-    totales_data = [
-        ["", Paragraph("<b>SUBTOTAL:</b>", normal_style), Paragraph(f"${subtotal:,.2f}", normal_style)],
-        ["", Paragraph("<b>IVA (15%):</b>", normal_style), Paragraph(f"${iva:,.2f}", normal_style)],
-        ["", Paragraph("<b>TOTAL USD:</b>", title_style), Paragraph(f"<b>${total:,.2f}</b>", title_style)],
-    ]
-    totales_table = Table(totales_data, colWidths=[300, 120, 120])
+    doc_str = str(quote.get('ruc_cedula') or '').strip()
+    is_ruc = len(doc_str) == 13 and doc_str.isdigit()
+
+    if is_ruc:
+        ret_ir = round(subtotal * 0.0175, 2)
+        ret_iva = round(iva * 0.30, 2)
+        total_ret = round(ret_ir + ret_iva, 2)
+        neto_cobrar = round(total - total_ret, 2)
+
+        ret_style = ParagraphStyle('RetStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor("#C2410C"))
+
+        totales_data = [
+            ["", Paragraph("<b>SUBTOTAL:</b>", normal_style), Paragraph(f"${subtotal:,.2f}", normal_style)],
+            ["", Paragraph("<b>IVA (15%):</b>", normal_style), Paragraph(f"${iva:,.2f}", normal_style)],
+            ["", Paragraph("<b>TOTAL FACTURADO:</b>", title_style), Paragraph(f"<b>${total:,.2f}</b>", title_style)],
+            ["", Paragraph("<b>(-) Retención IR (1.75% - SRI):</b>", subtitle_style), Paragraph(f"-${ret_ir:,.2f}", subtitle_style)],
+            ["", Paragraph("<b>(-) Retención IVA (30% - SRI):</b>", subtitle_style), Paragraph(f"-${ret_iva:,.2f}", subtitle_style)],
+            ["", Paragraph("<b>(-) TOTAL RETENCIONES SRI:</b>", ret_style), Paragraph(f"<b>-${total_ret:,.2f}</b>", ret_style)],
+            ["", Paragraph("<b>NETO A RECIBIR/COBRAR:</b>", title_style), Paragraph(f"<b>${neto_cobrar:,.2f}</b>", title_style)],
+        ]
+    else:
+        totales_data = [
+            ["", Paragraph("<b>SUBTOTAL:</b>", normal_style), Paragraph(f"${subtotal:,.2f}", normal_style)],
+            ["", Paragraph("<b>IVA (15%):</b>", normal_style), Paragraph(f"${iva:,.2f}", normal_style)],
+            ["", Paragraph("<b>TOTAL A COBRAR:</b>", title_style), Paragraph(f"<b>${total:,.2f}</b>", title_style)],
+            ["", Paragraph("<b>Retenciones SRI:</b>", subtitle_style), Paragraph("N/A (Cédula de Ciudadanía)", subtitle_style)],
+        ]
+
+    totales_table = Table(totales_data, colWidths=[240, 150, 150])
     totales_table.setStyle(TableStyle([
         ('ALIGN', (1,0), (-1,-1), 'RIGHT'),
         ('PADDING', (0,0), (-1,-1), 4),
@@ -118,7 +141,7 @@ def generate_quote_pdf(quote_id, output_path=None):
     story.append(totales_table)
     story.append(Spacer(1, 20))
 
-    nota_p = Paragraph(f"<b>Nota de Términos:</b> Para clientes B2B se otorgan 72 días de plazo de crédito. Las cotizaciones para contratos con el Gobierno están exentas de re-cotización durante el periodo de validez. Gracias por confiar en Inego Industrias.", subtitle_style)
+    nota_p = Paragraph(f"<b>Nota de Términos:</b> Para clientes B2B se otorgan 72 días de plazo de crédito. Las retenciones aplicadas se basan en la normativa del SRI para compras corporativas con RUC. Gracias por confiar en Inego Industrias.", subtitle_style)
     story.append(nota_p)
 
     doc.build(story)
