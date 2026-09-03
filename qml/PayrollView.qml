@@ -43,7 +43,7 @@ ScrollView {
             Text {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                text: "👔 Nómina y Roles de Pago de Socios (RF4.4)"
+                text: "👔 Nómina y Roles de Pago de Socios"
                 font.pixelSize: 15
                 font.bold: true
                 color: theme.textPrimary
@@ -130,7 +130,7 @@ ScrollView {
 
                     Column {
                         spacing: 2
-                        Text { text: "Bono Contable (RF4.3):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "Bono Contable:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
                         Text {
                             text: "$ " + payRoot.bonoContable5.toLocaleString(Qt.locale(), "f", 2) + " USD"
                             font.pixelSize: 12
@@ -249,7 +249,7 @@ ScrollView {
                             }
 
                             Text {
-                                text: "Cargo: " + modelData.cargo + " | Sueldo Base: $" + (modelData.sueldo_base || payRoot.sueldoBaseFijo).toFixed(2) + " + Bono RF4.3: $" + modelData.bono_5.toFixed(2) + " - Deducciones: $" + (modelData.deducciones || 0.0).toFixed(2)
+                                text: "Cargo: " + modelData.cargo + " | Sueldo Base: $" + (modelData.sueldo_base || payRoot.sueldoBaseFijo).toFixed(2) + " + Bono: $" + modelData.bono_5.toFixed(2) + " - Deducciones: $" + (modelData.deducciones || 0.0).toFixed(2)
                                 font.pixelSize: 11
                                 color: theme.textMuted
                             }

@@ -326,8 +326,8 @@ class DatabaseManager:
         cursor.execute("""
         INSERT INTO clientes (tipo_cliente, razon_social_nombre, ruc_cedula, telefono, email, direccion, dias_credito) VALUES
         ('B2B', 'Ministerio de Obras Públicas Zonal 8', '0960001110001', '042112233', 'compras@obraspublicas.gob.ec', 'Guayaquil - Av. Francisco de Orellana', 72),
-        ('B2B', 'Constructora Eléctrica del Pacífico S.A.', '0995544332001', '0990011223', 'gerencia@conselpac.com', 'Guayaquil - Vía a Samborondón', 72),
-        ('B2C', 'Juan Fernando Gómez', '0923456789', '0981122334', 'juan.gomez@gmail.com', 'Guayaquil - Urdesa Central', 0);
+        ('B2B', 'Constructora Eléctrica del Pacífico S.A.', '0920000114001', '0990011223', 'gerencia@conselpac.com', 'Guayaquil - Vía a Samborondón', 72),
+        ('B2C', 'Juan Fernando Gómez', '0920000015', '0981122334', 'juan.gomez@gmail.com', 'Guayaquil - Urdesa Central', 0);
         """)
 
         cursor.execute("""
