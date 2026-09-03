@@ -333,8 +333,61 @@ ScrollView {
                             return v
                         }
 
+                        up.indicator: Rectangle {
+                            x: spinYear.mirrored ? 0 : parent.width - width - 2
+                            y: 2
+                            height: (parent.height - 4) / 2
+                            width: 24
+                            color: upMouse.containsMouse ? theme.colorBronze : theme.bgCard
+                            border.color: theme.borderColor
+                            radius: 3
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "▲"
+                                font.pixelSize: 9
+                                color: upMouse.containsMouse ? "#FFFFFF" : theme.textPrimary
+                            }
+
+                            MouseArea {
+                                id: upMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: spinYear.increase()
+                            }
+                        }
+
+                        down.indicator: Rectangle {
+                            x: spinYear.mirrored ? 0 : parent.width - width - 2
+                            y: parent.height / 2
+                            height: (parent.height - 4) / 2
+                            width: 24
+                            color: downMouse.containsMouse ? theme.colorBronze : theme.bgCard
+                            border.color: theme.borderColor
+                            radius: 3
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "▼"
+                                font.pixelSize: 9
+                                color: downMouse.containsMouse ? "#FFFFFF" : theme.textPrimary
+                            }
+
+                            MouseArea {
+                                id: downMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: spinYear.decrease()
+                            }
+                        }
+
                         contentItem: TextInput {
-                            z: 2
+                            x: 4
+                            y: 0
+                            width: spinYear.width - 32
+                            height: spinYear.height
                             text: spinYear.textFromValue(spinYear.value, spinYear.locale)
                             font: spinYear.font
                             color: theme.textPrimary
@@ -347,8 +400,13 @@ ScrollView {
                             inputMethodHints: Qt.ImhDigitsOnly
 
                             onTextEdited: {
-                                if (text.indexOf(".") !== -1 || text.indexOf(",") !== -1) {
-                                    text = text.replace(/\./g, "").replace(/,/g, "")
+                                var clean = text.replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim()
+                                if (clean !== text) {
+                                    text = clean
+                                }
+                                var v = parseInt(clean)
+                                if (!isNaN(v) && v >= 2020 && v <= 2040) {
+                                    spinYear.value = v
                                 }
                             }
                         }
