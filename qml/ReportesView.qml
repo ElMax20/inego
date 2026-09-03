@@ -319,17 +319,38 @@ ScrollView {
                         to: 2040
                         value: new Date().getFullYear()
                         editable: true
+                        validator: IntValidator { bottom: 2020; top: 2040 }
 
                         textFromValue: function(val, loc) {
-                            return Math.abs(val).toString()
+                            return Math.abs(val).toString().replace(/\./g, "")
                         }
 
                         valueFromText: function(txt, loc) {
-                            var clean = txt.replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim()
+                            var clean = txt.toString().replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim()
                             var v = parseInt(clean)
                             if (isNaN(v) || v < 2020) return 2020
                             if (v > 2040) return 2040
                             return v
+                        }
+
+                        contentItem: TextInput {
+                            z: 2
+                            text: spinYear.textFromValue(spinYear.value, spinYear.locale)
+                            font: spinYear.font
+                            color: theme.textPrimary
+                            selectionColor: theme.colorBronze
+                            selectedTextColor: "#FFFFFF"
+                            horizontalAlignment: Qt.AlignHCenter
+                            verticalAlignment: Qt.AlignVCenter
+                            readOnly: !spinYear.editable
+                            validator: spinYear.validator
+                            inputMethodHints: Qt.ImhDigitsOnly
+
+                            onTextEdited: {
+                                if (text.indexOf(".") !== -1 || text.indexOf(",") !== -1) {
+                                    text = text.replace(/\./g, "").replace(/,/g, "")
+                                }
+                            }
                         }
                     }
 
