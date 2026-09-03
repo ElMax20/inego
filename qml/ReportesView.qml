@@ -842,6 +842,15 @@ ScrollView {
                     }
                 }
             }
+
+            // Límite estricto de fecha mínima: 1 de Agosto de 2026 (2026-08-01)
+            if (currentYear < 2026 || (currentYear === 2026 && currentMonth < 7)) {
+                currentYear = 2026
+                currentMonth = 7
+                selectedDay = 1
+            } else if (currentYear === 2026 && currentMonth === 7 && selectedDay < 1) {
+                selectedDay = 1
+            }
             calendarPopup.open()
         }
 
@@ -871,14 +880,18 @@ ScrollView {
                 Button {
                     width: 32
                     height: 32
+                    enabled: calendarPopup.currentYear > 2026 || (calendarPopup.currentYear === 2026 && calendarPopup.currentMonth > 7)
+                    opacity: enabled ? 1.0 : 0.4
                     contentItem: Text { text: "◀"; color: theme.textPrimary; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
                     onClicked: {
-                        if (calendarPopup.currentMonth === 0) {
-                            calendarPopup.currentMonth = 11
-                            calendarPopup.currentYear--
-                        } else {
-                            calendarPopup.currentMonth--
+                        if (calendarPopup.currentYear > 2026 || (calendarPopup.currentYear === 2026 && calendarPopup.currentMonth > 7)) {
+                            if (calendarPopup.currentMonth === 0) {
+                                calendarPopup.currentMonth = 11
+                                calendarPopup.currentYear--
+                            } else {
+                                calendarPopup.currentMonth--
+                            }
                         }
                     }
                 }
@@ -909,6 +922,15 @@ ScrollView {
                         }
                     }
                 }
+            }
+
+            // Nota informativa de fecha mínima permitida
+            Text {
+                text: "🔒 Fecha mín. permitida: 01 de Agosto de 2026"
+                font.pixelSize: 9
+                font.bold: true
+                color: theme.textMuted
+                anchors.horizontalCenter: parent.horizontalCenter
             }
 
             // Cabecera de días de la semana
@@ -947,29 +969,33 @@ ScrollView {
                         property int offset: calendarPopup.startDayOfWeek(calendarPopup.currentMonth, calendarPopup.currentYear)
                         property int dayNum: index - offset + 1
                         property bool isValidDay: dayNum >= 1 && dayNum <= calendarPopup.daysInMonth(calendarPopup.currentMonth, calendarPopup.currentYear)
-                        property bool isSelected: isValidDay && dayNum === calendarPopup.selectedDay
+                        property bool isAllowedDate: isValidDay && !(calendarPopup.currentYear < 2026 || (calendarPopup.currentYear === 2026 && calendarPopup.currentMonth < 7) || (calendarPopup.currentYear === 2026 && calendarPopup.currentMonth === 7 && dayNum < 1))
+                        property bool isSelected: isValidDay && isAllowedDate && dayNum === calendarPopup.selectedDay
 
                         Rectangle {
                             anchors.fill: parent
                             radius: 6
                             visible: parent.isValidDay
-                            color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse ? theme.bgMain : "transparent")
-                            border.color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse ? theme.borderColor : "transparent")
+                            opacity: parent.parent.isAllowedDate ? 1.0 : 0.35
+                            color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse && parent.parent.isAllowedDate ? theme.bgMain : "transparent")
+                            border.color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse && parent.parent.isAllowedDate ? theme.borderColor : "transparent")
 
                             Text {
                                 anchors.centerIn: parent
                                 text: parent.parent.isValidDay ? parent.parent.dayNum : ""
                                 font.pixelSize: 11
                                 font.bold: parent.parent.isSelected
-                                color: parent.parent.isSelected ? "#FFFFFF" : theme.textPrimary
+                                color: parent.parent.isSelected ? "#FFFFFF" : (parent.parent.isAllowedDate ? theme.textPrimary : theme.textMuted)
                             }
 
                             MouseArea {
                                 id: dayMouse
                                 anchors.fill: parent
-                                hoverEnabled: true
+                                enabled: parent.parent.isAllowedDate
+                                hoverEnabled: parent.parent.isAllowedDate
+                                cursorShape: parent.parent.isAllowedDate ? Qt.PointingHandCursor : Qt.ForbiddenCursor
                                 onClicked: {
-                                    if (parent.parent.isValidDay) {
+                                    if (parent.parent.isAllowedDate) {
                                         calendarPopup.selectedDay = parent.parent.dayNum
                                         var m = calendarPopup.currentMonth + 1
                                         var mm = m < 10 ? "0" + m : "" + m
@@ -1002,14 +1028,24 @@ ScrollView {
                     background: Rectangle { color: theme.colorSlate; radius: 6 }
                     onClicked: {
                         var now = new Date()
-                        calendarPopup.currentYear = now.getFullYear()
-                        calendarPopup.currentMonth = now.getMonth()
-                        calendarPopup.selectedDay = now.getDate()
+                        var y = now.getFullYear()
+                        var m = now.getMonth()
+                        var d = now.getDate()
 
-                        var m = calendarPopup.currentMonth + 1
-                        var mm = m < 10 ? "0" + m : "" + m
-                        var dd = calendarPopup.selectedDay < 10 ? "0" + calendarPopup.selectedDay : "" + calendarPopup.selectedDay
-                        var formattedDate = calendarPopup.currentYear + "-" + mm + "-" + dd
+                        if (y < 2026 || (y === 2026 && m < 7)) {
+                            y = 2026
+                            m = 7
+                            d = 1
+                        }
+
+                        calendarPopup.currentYear = y
+                        calendarPopup.currentMonth = m
+                        calendarPopup.selectedDay = d
+
+                        var mPlus = m + 1
+                        var mm = mPlus < 10 ? "0" + mPlus : "" + mPlus
+                        var dd = d < 10 ? "0" + d : "" + d
+                        var formattedDate = y + "-" + mm + "-" + dd
 
                         if (calendarPopup.targetTextField) {
                             calendarPopup.targetTextField.text = formattedDate
