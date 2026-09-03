@@ -1002,16 +1002,15 @@ ScrollView {
                             anchors.fill: parent
                             radius: 6
                             visible: parent.isValidDay
-                            opacity: parent.parent.isAllowedDate ? 1.0 : 0.35
-                            color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse && parent.parent.isAllowedDate ? theme.bgMain : "transparent")
-                            border.color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse && parent.parent.isAllowedDate ? theme.borderColor : "transparent")
+                            color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse && parent.parent.isAllowedDate ? (theme.isDark ? "#334155" : "#FEF3C7") : "transparent")
+                            border.color: parent.isSelected ? theme.colorBronze : (dayMouse.containsMouse && parent.parent.isAllowedDate ? theme.colorBronze : "transparent")
 
                             Text {
                                 anchors.centerIn: parent
                                 text: parent.parent.isValidDay ? parent.parent.dayNum : ""
-                                font.pixelSize: 11
-                                font.bold: parent.parent.isSelected
-                                color: parent.parent.isSelected ? "#FFFFFF" : (parent.parent.isAllowedDate ? theme.textPrimary : theme.textMuted)
+                                font.pixelSize: 12
+                                font.bold: parent.parent.isSelected || parent.parent.isAllowedDate
+                                color: parent.parent.isSelected ? "#FFFFFF" : (parent.parent.isAllowedDate ? (theme.isDark ? "#F8FAFC" : "#0F172A") : "#CBD5E1")
                             }
 
                             MouseArea {
