@@ -603,53 +603,80 @@ ScrollView {
             anchors.fill: parent
             spacing: 8
 
+            // Encabezado de mes/año con navegación limpia centrada (sin bloques visuales bruscos)
             Row {
-                width: parent.width
+                anchors.horizontalCenter: parent.horizontalCenter
                 height: 32
-                spacing: 6
+                spacing: 14
 
-                Button {
-                    width: 32
-                    height: 32
-                    enabled: calendarPopup.currentYear > 2026 || (calendarPopup.currentYear === 2026 && calendarPopup.currentMonth > 7)
-                    opacity: enabled ? 1.0 : 0.4
-                    contentItem: Text { text: "◀"; color: theme.textPrimary; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
-                    onClicked: {
-                        if (calendarPopup.currentYear > 2026 || (calendarPopup.currentYear === 2026 && calendarPopup.currentMonth > 7)) {
-                            if (calendarPopup.currentMonth === 0) {
-                                calendarPopup.currentMonth = 11
-                                calendarPopup.currentYear--
-                            } else {
-                                calendarPopup.currentMonth--
+                Rectangle {
+                    width: 28
+                    height: 28
+                    radius: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: prevMouse.containsMouse ? theme.bgMain : "transparent"
+                    opacity: prevMouse.enabled ? 1.0 : 0.3
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "◀"
+                        font.pixelSize: 11
+                        color: theme.textPrimary
+                    }
+
+                    MouseArea {
+                        id: prevMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        enabled: calendarPopup.currentYear > 2026 || (calendarPopup.currentYear === 2026 && calendarPopup.currentMonth > 7)
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ForbiddenCursor
+                        onClicked: {
+                            if (enabled) {
+                                if (calendarPopup.currentMonth === 0) {
+                                    calendarPopup.currentMonth = 11
+                                    calendarPopup.currentYear--
+                                } else {
+                                    calendarPopup.currentMonth--
+                                }
                             }
                         }
                     }
                 }
 
-                Item { Layout.fillWidth: true; width: 1; height: 1 }
-
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: calendarPopup.monthNames[calendarPopup.currentMonth] + " " + calendarPopup.currentYear
-                    font.pixelSize: 13
+                    font.pixelSize: 14
                     font.bold: true
                     color: theme.colorBronze
                 }
 
-                Item { Layout.fillWidth: true; width: 1; height: 1 }
+                Rectangle {
+                    width: 28
+                    height: 28
+                    radius: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: nextMouse.containsMouse ? theme.bgMain : "transparent"
 
-                Button {
-                    width: 32
-                    height: 32
-                    contentItem: Text { text: "▶"; color: theme.textPrimary; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    background: Rectangle { color: theme.bgMain; radius: 6; border.color: theme.borderColor }
-                    onClicked: {
-                        if (calendarPopup.currentMonth === 11) {
-                            calendarPopup.currentMonth = 0
-                            calendarPopup.currentYear++
-                        } else {
-                            calendarPopup.currentMonth++
+                    Text {
+                        anchors.centerIn: parent
+                        text: "▶"
+                        font.pixelSize: 11
+                        color: theme.textPrimary
+                    }
+
+                    MouseArea {
+                        id: nextMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (calendarPopup.currentMonth === 11) {
+                                calendarPopup.currentMonth = 0
+                                calendarPopup.currentYear++
+                            } else {
+                                calendarPopup.currentMonth++
+                            }
                         }
                     }
                 }
