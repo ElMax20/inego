@@ -964,14 +964,18 @@ class BackendBridge(QObject):
         return json.dumps({"success": True, "message": "Estado de usuario actualizado correctamente."})
 
     @Slot(str, result=str)
-    def downloadReport(self, report_type):
+    @Slot(str, str, result=str)
+    def downloadReport(self, report_type, output_path=None):
+        if output_path:
+            output_path = os.path.abspath(output_path)
         if report_type == "gantt":
-            fpath = export_gantt_chart_to_excel()
+            fpath = export_gantt_chart_to_excel(output_path)
         elif report_type == "sales":
-            fpath = export_sales_to_excel()
+            fpath = export_sales_to_excel(output_path=output_path)
         else:
-            fpath = export_expenses_to_excel()
-        return json.dumps({"success": True, "file": os.path.basename(fpath)})
+            fpath = export_expenses_to_excel(output_path=output_path)
+        abs_path = os.path.abspath(fpath)
+        return json.dumps({"success": True, "file": os.path.basename(abs_path), "full_path": abs_path})
 
     @Slot()
     def logout(self):

@@ -93,6 +93,14 @@ ScrollView {
                 reportesController.exportarReporteRango(txtRangeStart.text, txtRangeEnd.text, rutaLimpia)
             } else if (currentReportType === "caja") {
                 reportesController.exportarReporteCajaChica(txtCajaStart.text, txtCajaEnd.text, rutaLimpia)
+            } else if (currentReportType === "gantt") {
+                var resStr = backend.downloadReport("gantt", rutaLimpia)
+                var res = JSON.parse(resStr)
+                feedbackPopup.isError = false
+                feedbackPopup.titleText = "Diagrama de Gantt Exportado"
+                feedbackPopup.messageText = "El Diagrama de Gantt de Contratos Gobierno se exportó con éxito."
+                feedbackPopup.savedPath = res.full_path || rutaLimpia
+                feedbackPopup.open()
             }
         }
     }
@@ -307,10 +315,22 @@ ScrollView {
                         id: spinYear
                         width: 110
                         height: 34
-                        from: 2024
-                        to: 2030
+                        from: 2020
+                        to: 2040
                         value: new Date().getFullYear()
                         editable: true
+
+                        textFromValue: function(val, loc) {
+                            return Math.abs(val).toString()
+                        }
+
+                        valueFromText: function(txt, loc) {
+                            var clean = txt.replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim()
+                            var v = parseInt(clean)
+                            if (isNaN(v) || v < 2020) return 2020
+                            if (v > 2040) return 2040
+                            return v
+                        }
                     }
 
                     Button {
@@ -672,13 +692,8 @@ ScrollView {
                         radius: 8
                     }
                     onClicked: {
-                        var resStr = backend.downloadReport("gantt")
-                        var res = JSON.parse(resStr)
-                        feedbackPopup.isError = false
-                        feedbackPopup.titleText = "Diagrama de Gantt Generado"
-                        feedbackPopup.messageText = "Archivo generado exitosamente en data/" + res.file
-                        feedbackPopup.savedPath = ""
-                        feedbackPopup.open()
+                        var defaultName = "Diagrama_Gantt_Contratos_Gobierno_" + getTodayString().replace(/-/g, "") + ".xlsx"
+                        triggerSaveDialog("gantt", defaultName)
                     }
                 }
             }
@@ -1026,7 +1041,19 @@ ScrollView {
                         radius: 6
                     }
                     onClicked: {
-                        Qt.openUrlExternally("file:///" + feedbackPopup.savedPath)
+                        var p = feedbackPopup.savedPath.toString().replace(/\\/g, "/")
+                        if (p.indexOf("file:///") === 0) {
+                            // Ruta URL completa
+                        } else if (p.indexOf("file://") === 0) {
+                            p = "file:///" + p.substring(7)
+                        } else {
+                            if (p.length > 1 && p.charAt(1) === ":") {
+                                p = "file:///" + p
+                            } else {
+                                p = "file://" + p
+                            }
+                        }
+                        Qt.openUrlExternally(p)
                     }
                 }
             }
