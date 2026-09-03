@@ -8,6 +8,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
 
 from qml_bridge import BackendBridge
+from reportes_controller import ReportesController
 from config import COMPANY_NAME
 
 def main():
@@ -17,9 +18,13 @@ def main():
 
     engine = QQmlApplicationEngine()
 
-    # Registrar el puente Backend Python-QML
+    # 1. Registrar el puente Backend general Python-QML
     bridge = BackendBridge()
     engine.rootContext().setContextProperty("backend", bridge)
+
+    # 2. Registrar el controlador de Reportes y Exportación a Excel (RF5.1 - RF5.4)
+    reportes_controller = ReportesController()
+    engine.rootContext().setContextProperty("reportesController", reportes_controller)
 
     qml_file = os.path.join(BASE_DIR, "qml", "Main.qml")
     engine.load(QUrl.fromLocalFile(qml_file))

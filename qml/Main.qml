@@ -59,7 +59,7 @@ ApplicationWindow {
                 else if (route === "quotes") loader.source = "QuotesView.qml"
                 else if (route === "expenses") loader.source = "ExpensesView.qml"
                 else if (route === "payroll") loader.source = "PayrollView.qml"
-                else if (route === "reports") loader.source = "ReportsView.qml"
+                else if (route === "reports") loader.source = "ReportesView.qml"
                 else if (route === "users") loader.source = "UsersView.qml"
                 else if (route === "settings") loader.source = "SettingsView.qml"
                 else loader.source = "DashboardView.qml"

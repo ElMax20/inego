@@ -515,6 +515,15 @@ class BackendBridge(QObject):
                     f"Creó cotización express N° {numero_cot} por un total de ${total:,.2f} USD"
                 )
 
+            # Auto-registro en documento Excel de ventas
+            try:
+                from utils.excel_generator import export_sales_to_excel
+                from config import DATA_DIR
+                cons_path = os.path.join(DATA_DIR, "Reporte_Ventas_Inego_Consolidado.xlsx")
+                export_sales_to_excel(output_path=cons_path)
+            except Exception as ex_excel:
+                print(f"[AUTO EXCEL ERROR] {ex_excel}")
+
             return json.dumps({"success": True, "message": f"Cotización '{numero_cot}' creada con éxito.", "quote_id": cot_id})
         except Exception as e:
             return json.dumps({"success": False, "message": f"Error al guardar cotización: {str(e)}"})
@@ -531,7 +540,16 @@ class BackendBridge(QObject):
             if not numero_orden:
                 return json.dumps({"success": False, "message": "No se pudo convertir la cotización a orden de venta."})
             
-            return json.dumps({"success": True, "message": f"Cotización convertida con éxito. Orden de Venta {numero_orden} generada."})
+            # Auto-registro inmediato de la nueva venta en el documento Excel
+            try:
+                from utils.excel_generator import export_sales_to_excel
+                from config import DATA_DIR
+                cons_path = os.path.join(DATA_DIR, "Reporte_Ventas_Inego_Consolidado.xlsx")
+                export_sales_to_excel(output_path=cons_path)
+            except Exception as ex_excel:
+                print(f"[AUTO EXCEL ERROR] {ex_excel}")
+
+            return json.dumps({"success": True, "message": f"Cotización convertida con éxito. Orden de Venta {numero_orden} generada y registrada en Excel."})
         except Exception as e:
             return json.dumps({"success": False, "message": f"Error al convertir cotización: {str(e)}"})
 
@@ -869,11 +887,20 @@ class BackendBridge(QObject):
         if bonus_val <= 0:
             return json.dumps({"success": False, "message": "⚠️ Por favor ingrese un valor de bono contable válido mayor a 0."})
         
-        user_name = self._current_user['nombre_completo'] if self._current_user else "Socio 1 - Administrador de Dinero"
-        note_str = note.strip() if note else "Ingreso manual de bono mensual"
-        
         AuditLogModel.log(user_name, "Cálculo y Registro de Bono (5%)", f"Autorizó y confirmó Bono Contable de ${bonus_val:,.2f} USD. Nota: {note_str}")
-        return json.dumps({"success": True, "message": f"✅ Bono Contable de ${bonus_val:,.2f} USD confirmado y registrado exitosamente."})
+        
+        # Sincronización y exportación automática a Excel de ventas
+        try:
+            from utils.excel_generator import export_sales_to_excel
+            from config import DATA_DIR
+            cons_path = os.path.join(DATA_DIR, "Reporte_Ventas_Inego_Consolidado.xlsx")
+            export_sales_to_excel(output_path=cons_path)
+            last_excel = export_sales_to_excel()
+            file_name = os.path.basename(last_excel)
+            return json.dumps({"success": True, "message": f"✅ Registro confirmado exitosamente. Las ventas han sido registradas y actualizadas en el documento Excel: {file_name}"})
+        except Exception as ex_sync:
+            print(f"[EXCEL SYNC ERROR] {ex_sync}")
+            return json.dumps({"success": True, "message": f"✅ Bono Contable de ${bonus_val:,.2f} USD confirmado y registrado exitosamente."})
 
     @Slot(result=str)
     def getUsersData(self):

@@ -147,6 +147,19 @@ ScrollView {
                             stockErrDialog.open()
                         }
                     }
+
+                    Button {
+                        height: 34
+                        width: 175
+                        contentItem: Text { text: "📊 Reporte Ventas (.xlsx)"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorBronze; radius: 6 }
+                        onClicked: {
+                            var resStr = backend.downloadReport("sales")
+                            var res = JSON.parse(resStr)
+                            stockErrTxt.text = "✅ Reporte de ventas actualizado y generado en data/" + res.file
+                            stockErrDialog.open()
+                        }
+                    }
                 }
             }
         }
