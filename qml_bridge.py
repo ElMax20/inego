@@ -9,7 +9,7 @@ sys.path.append(BASE_DIR)
 from database.connection import db
 from models.models import UserModel, SupplierModel, ClientModel, ProductModel, AuditLogModel
 from utils.excel_generator import export_sales_to_excel, export_gantt_chart_to_excel, export_expenses_to_excel
-from utils.validators import validate_email, validate_phone, validate_cedula, validate_ruc, validate_cedula_or_ruc, validate_required_fields
+from utils.validators import validate_email, validate_phone, validate_cedula, validate_ruc, validate_cedula_or_ruc, validate_required_fields, normalize_tildes
 from config import COMPANY_NAME, PARTNER_FIXED_PAY, PARTNER_BONUS_PERCENT
 
 class BackendBridge(QObject):
@@ -205,7 +205,7 @@ class BackendBridge(QObject):
         if not category_name or not category_name.strip():
             return json.dumps({"success": False, "message": "Ingrese el nombre de la categoría."})
 
-        name_clean = category_name.strip()
+        name_clean = normalize_tildes(category_name.strip())
         try:
             db.execute_query("INSERT INTO categorias_producto (nombre) VALUES (%s)", (name_clean,))
         except Exception:
@@ -223,14 +223,16 @@ class BackendBridge(QObject):
             return json.dumps({"success": False, "message": "Debe ingresar código y nombre del producto."})
 
         cod_clean = codigo.strip()
-        nom_clean = nombre.strip()
-        desc_text = descripcion.strip() if descripcion else "Sin descripción"
-        desc_final = f"{desc_text} | Proveedor: {proveedor}" if proveedor else desc_text
+        nom_clean = normalize_tildes(nombre.strip())
+        cat_clean = normalize_tildes(categoria.strip()) if categoria else "General"
+        desc_text = normalize_tildes(descripcion.strip()) if descripcion else "Sin descripción"
+        prov_clean = normalize_tildes(proveedor.strip()) if proveedor else ""
+        desc_final = f"{desc_text} | Proveedor: {prov_clean}" if prov_clean else desc_text
 
         try:
             db.execute_query(
                 "INSERT INTO productos (codigo, nombre, categoria, descripcion, tipo_stock, stock_actual, stock_minimo, precio_referencial) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (cod_clean, nom_clean, categoria if categoria else "General", desc_final, tipo_stock if tipo_stock else "Permanente", stock_inicial, stock_minimo, precio_referencial)
+                (cod_clean, nom_clean, cat_clean, desc_final, tipo_stock if tipo_stock else "Permanente", stock_inicial, stock_minimo, precio_referencial)
             )
         except Exception:
             db.execute_query(
@@ -622,13 +624,15 @@ class BackendBridge(QObject):
             from datetime import datetime
             fecha_hoy = datetime.now().strftime("%Y-%m-%d")
             registrado_por = self._current_user['nombre_completo'] if self._current_user else "Socio 1 - Administrador"
+            concepto_clean = normalize_tildes(concepto.strip())
+            rubro_clean = normalize_tildes(rubro.strip()) if rubro else "General"
             db.execute_query("""
                 INSERT INTO gastos (fecha, categoria, concepto, monto, metodo_pago, registrado_por)
                 VALUES (%s, %s, %s, %s, 'Caja Chica', %s)
-            """, (fecha_hoy, rubro, concepto.strip(), monto_float, registrado_por))
+            """, (fecha_hoy, rubro_clean, concepto_clean, monto_float, registrado_por))
             
             if self._current_user:
-                AuditLogModel.log(self._current_user['nombre_completo'], "Registro de Gasto", f"Registró gasto de caja chica: {concepto.strip()} por ${monto_float:,.2f} USD")
+                AuditLogModel.log(self._current_user['nombre_completo'], "Registro de Gasto", f"Registró gasto de caja chica: {concepto_clean} por ${monto_float:,.2f} USD")
             
             return json.dumps({"success": True, "message": "Gasto registrado exitosamente."})
         except Exception as e:

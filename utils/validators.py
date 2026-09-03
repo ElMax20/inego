@@ -12,6 +12,21 @@ def validate_email(email):
         
     return True, ""
 
+def normalize_tildes(text):
+    """
+    Convierte automáticamente cualquier tilde grave o chueca (à, è, ì, ò, ù, À, È, Ì, Ò, Ù)
+    en su respectiva tilde normal aguda (á, é, í, ó, ú, Á, É, Í, Ó, Ú).
+    """
+    if not text or not isinstance(text, str):
+        return text
+    replacements = {
+        'à': 'á', 'è': 'é', 'ì': 'í', 'ò': 'ó', 'ù': 'ú',
+        'À': 'Á', 'È': 'É', 'Ì': 'Í', 'Ò': 'Ó', 'Ù': 'Ú'
+    }
+    for bad_char, good_char in replacements.items():
+        text = text.replace(bad_char, good_char)
+    return text
+
 def validate_phone(phone):
     """ Valida que el teléfono contenga únicamente dígitos numéricos y tenga 9 o 10 dígitos """
     if not phone:
