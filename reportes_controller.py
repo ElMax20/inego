@@ -512,10 +512,20 @@ class ReportesController(QObject):
                 self.exportError.emit("⚠️ Mes o año especificado fuera de rango válido.")
                 return
 
+            MESES_ESPANOL = {
+                1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+                5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+                9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+            }
+            DIAS_ESPANOL = {
+                0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves",
+                4: "Viernes", 5: "Sábado", 6: "Domingo"
+            }
+
             _, ultimo_dia = calendar.monthrange(anio_int, mes_int)
             fecha_inicio = f"{anio_int:04d}-{mes_int:02d}-01"
             fecha_fin = f"{anio_int:04d}-{mes_int:02d}-{ultimo_dia:02d}"
-            nombre_mes = calendar.month_name[mes_int].capitalize()
+            nombre_mes = MESES_ESPANOL.get(mes_int, calendar.month_name[mes_int].capitalize())
 
             query_mes_unificado = """
                 SELECT 
@@ -650,7 +660,7 @@ class ReportesController(QObject):
                 for idx, r in enumerate(list_diario):
                     try:
                         fecha_obj = datetime.strptime(str(r['fecha']), "%Y-%m-%d")
-                        dia_semana = fecha_obj.strftime("%A")
+                        dia_semana = DIAS_ESPANOL.get(fecha_obj.weekday(), "N/A")
                     except Exception:
                         dia_semana = "N/A"
 
