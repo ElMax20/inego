@@ -311,102 +311,121 @@ ScrollView {
                         currentIndex: new Date().getMonth()
                     }
 
-                    SpinBox {
+                    // SELECTOR DE AÑO INTERACTIVO CON BOTONES ▲ (+1) Y ▼ (-1)
+                    Item {
                         id: spinYear
                         width: 110
                         height: 34
-                        from: 2020
-                        to: 2040
-                        value: new Date().getFullYear()
-                        editable: true
-                        validator: IntValidator { bottom: 2020; top: 2040 }
+                        property int value: new Date().getFullYear()
 
-                        textFromValue: function(val, loc) {
-                            return Math.abs(val).toString().replace(/\./g, "")
-                        }
+                        Row {
+                            anchors.fill: parent
+                            spacing: 4
 
-                        valueFromText: function(txt, loc) {
-                            var clean = txt.toString().replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim()
-                            var v = parseInt(clean)
-                            if (isNaN(v) || v < 2020) return 2020
-                            if (v > 2040) return 2040
-                            return v
-                        }
+                            TextField {
+                                id: txtYearDisplay
+                                width: 74
+                                height: 34
+                                text: spinYear.value.toString()
+                                color: theme.textPrimary
+                                font.bold: true
+                                font.pixelSize: 13
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: IntValidator { bottom: 2020; top: 2040 }
 
-                        up.indicator: Rectangle {
-                            x: spinYear.mirrored ? 0 : parent.width - width - 2
-                            y: 2
-                            height: (parent.height - 4) / 2
-                            width: 24
-                            color: upMouse.containsMouse ? theme.colorBronze : theme.bgCard
-                            border.color: theme.borderColor
-                            radius: 3
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "▲"
-                                font.pixelSize: 9
-                                color: upMouse.containsMouse ? "#FFFFFF" : theme.textPrimary
-                            }
-
-                            MouseArea {
-                                id: upMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: spinYear.increase()
-                            }
-                        }
-
-                        down.indicator: Rectangle {
-                            x: spinYear.mirrored ? 0 : parent.width - width - 2
-                            y: parent.height / 2
-                            height: (parent.height - 4) / 2
-                            width: 24
-                            color: downMouse.containsMouse ? theme.colorBronze : theme.bgCard
-                            border.color: theme.borderColor
-                            radius: 3
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "▼"
-                                font.pixelSize: 9
-                                color: downMouse.containsMouse ? "#FFFFFF" : theme.textPrimary
-                            }
-
-                            MouseArea {
-                                id: downMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: spinYear.decrease()
-                            }
-                        }
-
-                        contentItem: TextInput {
-                            x: 4
-                            y: 0
-                            width: spinYear.width - 32
-                            height: spinYear.height
-                            text: spinYear.textFromValue(spinYear.value, spinYear.locale)
-                            font: spinYear.font
-                            color: theme.textPrimary
-                            selectionColor: theme.colorBronze
-                            selectedTextColor: "#FFFFFF"
-                            horizontalAlignment: Qt.AlignHCenter
-                            verticalAlignment: Qt.AlignVCenter
-                            readOnly: !spinYear.editable
-                            validator: spinYear.validator
-                            inputMethodHints: Qt.ImhDigitsOnly
-
-                            onTextEdited: {
-                                var clean = text.replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim()
-                                if (clean !== text) {
-                                    text = clean
+                                background: Rectangle {
+                                    color: theme.bgMain
+                                    radius: 6
+                                    border.color: theme.borderColor
+                                    border.width: 1
                                 }
-                                var v = parseInt(clean)
-                                if (!isNaN(v) && v >= 2020 && v <= 2040) {
+
+                                onTextEdited: {
+                                    var clean = text.replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim()
+                                    if (clean !== text) {
+                                        text = clean
+                                    }
+                                    var v = parseInt(clean)
+                                    if (!isNaN(v) && v >= 2020 && v <= 2040) {
+                                        spinYear.value = v
+                                    }
+                                }
+
+                                onEditingFinished: {
+                                    var v = parseInt(text.replace(/\./g, "").replace(/,/g, "").replace(/-/g, "").trim())
+                                    if (isNaN(v) || v < 2020) v = 2020
+                                    if (v > 2040) v = 2040
                                     spinYear.value = v
+                                    text = v.toString()
+                                }
+                            }
+
+                            Column {
+                                spacing: 2
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Rectangle {
+                                    width: 28
+                                    height: 15
+                                    color: btnUpMouse.containsMouse ? theme.colorBronze : theme.bgCard
+                                    radius: 4
+                                    border.color: theme.borderColor
+                                    border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "▲"
+                                        font.pixelSize: 8
+                                        font.bold: true
+                                        color: btnUpMouse.containsMouse ? "#FFFFFF" : theme.textPrimary
+                                    }
+
+                                    MouseArea {
+                                        id: btnUpMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (spinYear.value < 2040) {
+                                                spinYear.value += 1
+                                                txtYearDisplay.text = spinYear.value.toString()
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 28
+                                    height: 15
+                                    color: btnDownMouse.containsMouse ? theme.colorBronze : theme.bgCard
+                                    radius: 4
+                                    border.color: theme.borderColor
+                                    border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "▼"
+                                        font.pixelSize: 8
+                                        font.bold: true
+                                        color: btnDownMouse.containsMouse ? "#FFFFFF" : theme.textPrimary
+                                    }
+
+                                    MouseArea {
+                                        id: btnDownMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (spinYear.value > 2020) {
+                                                spinYear.value -= 1
+                                                txtYearDisplay.text = spinYear.value.toString()
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
