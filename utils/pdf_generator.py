@@ -7,10 +7,13 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from database.connection import db
 from utils.assets import get_logo_file_path
 from config import DATA_DIR, COMPANY_NAME, COMPANY_SLOGAN, COMPANY_LOCATION
+from utils.retenciones_sri import calcular_retencion_sri
 
 def generate_quote_pdf(quote_id, output_path=None):
     quote = db.fetch_one("""
-        SELECT c.*, cl.razon_social_nombre, cl.ruc_cedula, cl.telefono, cl.email, cl.direccion, cl.tipo_cliente, cl.dias_credito
+        SELECT c.*, cl.razon_social_nombre, cl.ruc_cedula, cl.telefono, cl.email, cl.direccion, cl.tipo_cliente, cl.dias_credito,
+               COALESCE(cl.regimen_tributario, 'Régimen General') AS regimen_tributario,
+               COALESCE(cl.es_contribuyente_especial, 0) AS es_contribuyente_especial
         FROM cotizaciones c
         JOIN clientes cl ON c.cliente_id = cl.id
         WHERE c.id = %s
@@ -105,32 +108,30 @@ def generate_quote_pdf(quote_id, output_path=None):
     iva = float(quote['iva'])
     total = float(quote['total'])
 
-    doc_str = str(quote.get('ruc_cedula') or '').strip()
-    is_ruc = len(doc_str) == 13 and doc_str.isdigit()
+    ret = calcular_retencion_sri(
+        quote.get('ruc_cedula'), subtotal, iva,
+        regimen_tributario=quote.get('regimen_tributario', 'Régimen General'),
+        es_contribuyente_especial=bool(quote.get('es_contribuyente_especial', 0))
+    )
 
-    if is_ruc:
-        ret_ir = round(subtotal * 0.0175, 2)
-        ret_iva = round(iva * 0.30, 2)
-        total_ret = round(ret_ir + ret_iva, 2)
-        neto_cobrar = round(total - total_ret, 2)
-
+    if ret['aplica']:
         ret_style = ParagraphStyle('RetStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor("#C2410C"))
 
         totales_data = [
             ["", Paragraph("<b>SUBTOTAL:</b>", normal_style), Paragraph(f"${subtotal:,.2f}", normal_style)],
             ["", Paragraph("<b>IVA (15%):</b>", normal_style), Paragraph(f"${iva:,.2f}", normal_style)],
             ["", Paragraph("<b>TOTAL FACTURADO:</b>", title_style), Paragraph(f"<b>${total:,.2f}</b>", title_style)],
-            ["", Paragraph("<b>(-) Retención IR (1.75% - SRI):</b>", subtitle_style), Paragraph(f"-${ret_ir:,.2f}", subtitle_style)],
-            ["", Paragraph("<b>(-) Retención IVA (30% - SRI):</b>", subtitle_style), Paragraph(f"-${ret_iva:,.2f}", subtitle_style)],
-            ["", Paragraph("<b>(-) TOTAL RETENCIONES SRI:</b>", ret_style), Paragraph(f"<b>-${total_ret:,.2f}</b>", ret_style)],
-            ["", Paragraph("<b>NETO A RECIBIR/COBRAR:</b>", title_style), Paragraph(f"<b>${neto_cobrar:,.2f}</b>", title_style)],
+            ["", Paragraph(f"<b>(-) Retención IR ({ret['porcentaje_ir']:.2f}% - SRI):</b>", subtitle_style), Paragraph(f"-${ret['retencion_ir']:,.2f}", subtitle_style)],
+            ["", Paragraph(f"<b>(-) Retención IVA ({ret['porcentaje_iva']:.2f}% - SRI):</b>", subtitle_style), Paragraph(f"-${ret['retencion_iva']:,.2f}", subtitle_style)],
+            ["", Paragraph("<b>(-) TOTAL RETENCIONES SRI:</b>", ret_style), Paragraph(f"<b>-${ret['total_retenciones']:,.2f}</b>", ret_style)],
+            ["", Paragraph("<b>NETO A RECIBIR/COBRAR:</b>", title_style), Paragraph(f"<b>${ret['neto_cobrar']:,.2f}</b>", title_style)],
         ]
     else:
         totales_data = [
             ["", Paragraph("<b>SUBTOTAL:</b>", normal_style), Paragraph(f"${subtotal:,.2f}", normal_style)],
             ["", Paragraph("<b>IVA (15%):</b>", normal_style), Paragraph(f"${iva:,.2f}", normal_style)],
             ["", Paragraph("<b>TOTAL A COBRAR:</b>", title_style), Paragraph(f"<b>${total:,.2f}</b>", title_style)],
-            ["", Paragraph("<b>Retenciones SRI:</b>", subtitle_style), Paragraph("N/A (Cédula de Ciudadanía)", subtitle_style)],
+            ["", Paragraph("<b>Retenciones SRI:</b>", subtitle_style), Paragraph(f"N/A ({ret['aplica_txt']})", subtitle_style)],
         ]
 
     totales_table = Table(totales_data, colWidths=[240, 150, 150])

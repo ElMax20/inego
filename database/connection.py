@@ -175,6 +175,16 @@ class DatabaseManager:
                 except Exception:
                     pass
 
+                try:
+                    cursor.execute("ALTER TABLE clientes ADD COLUMN regimen_tributario TEXT DEFAULT 'Régimen General'")
+                except Exception:
+                    pass
+
+                try:
+                    cursor.execute("ALTER TABLE clientes ADD COLUMN es_contribuyente_especial INTEGER DEFAULT 0")
+                except Exception:
+                    pass
+
                 cursor.execute("""
                 CREATE TABLE IF NOT EXISTS cotizaciones (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

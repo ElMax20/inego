@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from database.connection import db
 from config import DATA_DIR, COMPANY_NAME
 
+from utils.retenciones_sri import calcular_retencion_sri
+
 def export_sales_to_excel(date_from=None, date_to=None, output_path=None):
     if not output_path:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -87,21 +89,16 @@ def export_sales_to_excel(date_from=None, date_to=None, output_path=None):
     current_row = 5
 
     def _calc_ret(ruc_ced, sub, iv):
-        doc = str(ruc_ced or '').strip()
-        is_ruc = len(doc) == 13 and doc.isdigit()
-        if is_ruc:
-            r_ir = round(sub * 0.0175, 2)
-            r_iva = round(iv * 0.30, 2)
-            tot_r = round(r_ir + r_iva, 2)
-            ap_txt = "Sí (RUC 13 dígitos)"
-        else:
-            r_ir = 0.0
-            r_iva = 0.0
-            tot_r = 0.0
-            ap_txt = "No (Cédula / N/A)"
-        tf = round(sub + iv, 2)
-        nc = round(tf - tot_r, 2)
-        return {'is_ruc': is_ruc, 'ap_txt': ap_txt, 'r_ir': r_ir, 'r_iva': r_iva, 'tot_r': tot_r, 'tf': tf, 'nc': nc}
+        res = calcular_retencion_sri(ruc_ced, sub, iv)
+        return {
+            'is_ruc': res['is_ruc'],
+            'ap_txt': res['aplica_txt'],
+            'r_ir': res['retencion_ir'],
+            'r_iva': res['retencion_iva'],
+            'tot_r': res['total_retenciones'],
+            'tf': res['total_facturado'],
+            'nc': res['neto_cobrar']
+        }
 
     for idx, r in enumerate(records):
         sb = float(r["subtotal"] or 0.0)

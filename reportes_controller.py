@@ -31,6 +31,7 @@ from openpyxl.utils import get_column_letter
 from PySide6.QtCore import QObject, Slot, Signal
 from database.connection import db
 from config import COMPANY_NAME
+from utils.retenciones_sri import calcular_retencion_sri
 
 
 class ReportesController(QObject):
@@ -144,39 +145,25 @@ class ReportesController(QObject):
     # UTILIDADES DE RETENCIONES DE LEY SRI (ECUADOR) Y DESGLOSE DE PRODUCTOS
     # -------------------------------------------------------------------------
     @staticmethod
-    def _calcular_retenciones_sri(ruc_cedula: str, subtotal: float, iva: float):
+    def _calcular_retenciones_sri(ruc_cedula: str, subtotal: float, iva: float, regimen: str = "Régimen General", tipo_transaccion: str = "Bienes", es_especial: bool = False):
         """
-        Calcula las retenciones de impuestos según la Ley de Régimen Tributario Interno del Ecuador (SRI):
-        - Solo aplica retenciones a empresas / personas con RUC de 13 dígitos.
-        - Retención Impuesto a la Renta (Bienes Muebles): 1.75% del Subtotal.
-        - Retención IVA (Bienes Muebles): 30% del IVA.
-        - Si la identificación es Cédula (10 dígitos) o Consumidor Final: Retención IR = 0.00, Retención IVA = 0.00.
+        Calcula las retenciones de impuestos según la normativa oficial del SRI del Ecuador
+        invocando el motor especializado utils.retenciones_sri.
         """
-        doc = str(ruc_cedula or '').strip()
-        is_ruc = len(doc) == 13 and doc.isdigit()
-
-        if is_ruc:
-            ret_ir = round(subtotal * 0.0175, 2)
-            ret_iva = round(iva * 0.30, 2)
-            total_ret = round(ret_ir + ret_iva, 2)
-            aplica_txt = "Sí (RUC 13 dígitos)"
-        else:
-            ret_ir = 0.0
-            ret_iva = 0.0
-            total_ret = 0.0
-            aplica_txt = "No (Cédula / N/A)"
-
-        total_facturado = round(subtotal + iva, 2)
-        neto_cobrar = round(total_facturado - total_ret, 2)
-
+        res = calcular_retencion_sri(
+            ruc_cedula, subtotal, iva,
+            regimen_tributario=regimen,
+            tipo_transaccion=tipo_transaccion,
+            es_contribuyente_especial=es_especial
+        )
         return {
-            'is_ruc': is_ruc,
-            'aplica_txt': aplica_txt,
-            'ret_ir': ret_ir,
-            'ret_iva': ret_iva,
-            'total_ret': total_ret,
-            'total_facturado': total_facturado,
-            'neto_cobrar': neto_cobrar
+            'is_ruc': res['is_ruc'],
+            'aplica_txt': res['aplica_txt'],
+            'ret_ir': res['retencion_ir'],
+            'ret_iva': res['retencion_iva'],
+            'total_ret': res['total_retenciones'],
+            'total_facturado': res['total_facturado'],
+            'neto_cobrar': res['neto_cobrar']
         }
 
     @staticmethod
