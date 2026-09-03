@@ -7,11 +7,25 @@ ScrollView {
 
     property var quotes: []
 
+    property real salesBase: 12450.00
+    property real purchasesBase: 8720.00
+    property real totalConsolidated: 21170.00
+    property real calculatedBonus: 1058.50
+
     Component.onCompleted: refresh()
 
     function refresh() {
         var raw = backend.getQuotesData()
         quotes = JSON.parse(raw)
+
+        var bRaw = backend.getBonusCalculationData()
+        if (bRaw) {
+            var bRes = JSON.parse(bRaw)
+            salesBase = bRes.sales_base || 12450.00
+            purchasesBase = bRes.purchases_base || 8720.00
+            totalConsolidated = bRes.total_consolidated || 21170.00
+            calculatedBonus = bRes.calculated_bonus || 1058.50
+        }
     }
 
     Column {
@@ -55,6 +69,113 @@ ScrollView {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: newQuotePopup.openQuoteDialog()
+                }
+            }
+        }
+
+        // MÓDULO DE INGRESO MANUAL DE BONO CONTABLE
+        Rectangle {
+            width: parent.width
+            height: 145
+            color: theme.bgCard
+            radius: 10
+            border.color: theme.borderColor
+            border.width: 1
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 14
+                spacing: 10
+
+                // TÍTULO DEL MÓDULO (SIN 5%)
+                Text {
+                    text: "🧮 Cálculo de Bono Mensual - Ingreso Manual"
+                    font.pixelSize: 13
+                    font.bold: true
+                    color: theme.colorBronze
+                }
+
+                // CUERPO DEL MÓDULO (3 DATOS CLAVE)
+                Row {
+                    width: parent.width
+                    spacing: 30
+
+                    Column {
+                        spacing: 2
+                        Text { text: "Base Cál. Ventas (Mes Anterior):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "$ " + qRoot.salesBase.toLocaleString(Qt.locale(), "f", 2); font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+                    }
+
+                    Column {
+                        spacing: 2
+                        Text { text: "Base Cál. Compras (Mes Anterior):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "$ " + qRoot.purchasesBase.toLocaleString(Qt.locale(), "f", 2); font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+                    }
+
+                    Column {
+                        spacing: 2
+                        Text { text: "Total Base Consolidada:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "$ " + qRoot.totalConsolidated.toLocaleString(Qt.locale(), "f", 2); font.pixelSize: 13; font.bold: true; color: theme.colorSuccess }
+                    }
+                }
+
+                // CAMPO DE INGRESO MANUAL Y ACCIONES
+                Row {
+                    width: parent.width
+                    spacing: 12
+
+                    Text {
+                        text: "🧮 Bono Contable Ingreso Manual:"
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: theme.textPrimary
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    TextField {
+                        id: txtBonusManual
+                        width: 120
+                        height: 34
+                        text: qRoot.calculatedBonus.toFixed(2)
+                        color: theme.isDark ? "#000000" : "#0F172A"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
+                        background: Rectangle {
+                            color: "#FFFFFF"
+                            radius: 6
+                            border.color: theme.borderColor
+                            border.width: 1
+                        }
+                    }
+
+                    Button {
+                        height: 34
+                        width: 155
+                        contentItem: Text { text: "⚙️ Calcular (Simulación)"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSlate; radius: 6 }
+                        onClicked: {
+                            var calc = qRoot.totalConsolidated * 0.05
+                            txtBonusManual.text = calc.toFixed(2)
+                        }
+                    }
+
+                    Button {
+                        height: 34
+                        width: 165
+                        contentItem: Text { text: "✓ Confirmar y Registrar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSuccess; radius: 6 }
+                        onClicked: {
+                            var val = parseFloat(txtBonusManual.text) || 0.0
+                            var resStr = backend.registerManualBonus(val, "Ingreso manual desde Cotizaciones y Ventas")
+                            var res = JSON.parse(resStr)
+                            quoteMsgTxt.text = res.message
+                            quoteMsgDialog.open()
+                        }
+                    }
                 }
             }
         }

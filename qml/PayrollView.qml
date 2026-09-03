@@ -130,7 +130,7 @@ ScrollView {
 
                     Column {
                         spacing: 2
-                        Text { text: "Bono Contable 5% (RF4.3):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "Bono Contable (RF4.3):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
                         Text {
                             text: "$ " + payRoot.bonoContable5.toLocaleString(Qt.locale(), "f", 2) + " USD"
                             font.pixelSize: 12

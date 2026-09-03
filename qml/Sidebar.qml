@@ -55,7 +55,7 @@ Rectangle {
                 { route: "clients", label: "👥 Clientes (B2B/B2C)", title: "HISTORIAL CLIENTES Y CRÉDITOS 72 DÍAS" },
                 { route: "quotes", label: "📋 Cotizaciones", title: "COTIZADOR MULTI-PROVEEDOR Y WHATSAPP" },
                 { route: "expenses", label: "🧾 Gastos y Servicios", title: "CONTROL DE CAJA CHICA, AGUA Y LOGÍSTICA" },
-                { route: "payroll", label: "👔 Nómina de Socios", title: "ROLES DE PAGO FÍSICOS ($50 + 5%)" },
+                { route: "payroll", label: "👔 Nómina de Socios", title: "ROLES DE PAGO FÍSICOS ($50 + BONO)" },
                 { route: "reports", label: "📈 Reportes y Gantt", title: "DESCARGA DE EXCEL Y GANTT GOBIERNO" },
                 { route: "users", label: "🛡️ Usuarios y Bitácora", title: "CONTROL DE ACCESO Y AUDITORÍA DE TAREAS" },
                 { route: "settings", label: "⚙️ Configuración", title: "CONFIGURACIÓN DE TEMA Y APARIENCIA" }
