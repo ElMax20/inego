@@ -10,6 +10,11 @@ ScrollView {
     property real bonoContable5: 1058.50
     property real totalNetoPorSocio: 1108.50
 
+    property real salesBase: 12450.00
+    property real purchasesBase: 8720.00
+    property real totalConsolidated: 21170.00
+    property real calculatedBonus: 1058.50
+
     Component.onCompleted: refresh()
 
     function refresh() {
@@ -26,6 +31,15 @@ ScrollView {
                 payroll = data
             }
         }
+
+        var bRaw = backend.getBonusCalculationData()
+        if (bRaw) {
+            var bRes = JSON.parse(bRaw)
+            salesBase = bRes.sales_base || 12450.00
+            purchasesBase = bRes.purchases_base || 8720.00
+            totalConsolidated = bRes.total_consolidated || 21170.00
+            calculatedBonus = bRes.calculated_bonus || 1058.50
+        }
     }
 
     Column {
@@ -35,7 +49,7 @@ ScrollView {
 
         Item { height: 10; width: 1 }
 
-        // HEADER PRINCIPAL NÓMINA DE SOCIOS (RF4.4) CON BOTÓN DE AGREGAR ROL
+        // HEADER PRINCIPAL NÓMINA DE SOCIOS CON BOTÓN DE AGREGAR ROL
         Item {
             width: parent.width
             height: 40
@@ -69,6 +83,111 @@ ScrollView {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: newPayrollPopup.open()
+                }
+            }
+        }
+
+        // MÓDULO DE INGRESO MANUAL DE BONO CONTABLE (NÓMINA DE SOCIOS)
+        Rectangle {
+            width: parent.width
+            height: 145
+            color: theme.bgCard
+            radius: 10
+            border.color: theme.borderColor
+            border.width: 1
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 14
+                spacing: 10
+
+                Text {
+                    text: "🧮 Cálculo de Bono Mensual - Ingreso Manual"
+                    font.pixelSize: 13
+                    font.bold: true
+                    color: theme.colorBronze
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: 30
+
+                    Column {
+                        spacing: 2
+                        Text { text: "Base Cál. Ventas (Mes Anterior):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "$ " + payRoot.salesBase.toLocaleString(Qt.locale(), "f", 2); font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+                    }
+
+                    Column {
+                        spacing: 2
+                        Text { text: "Base Cál. Compras (Mes Anterior):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "$ " + payRoot.purchasesBase.toLocaleString(Qt.locale(), "f", 2); font.pixelSize: 12; font.bold: true; color: theme.textPrimary }
+                    }
+
+                    Column {
+                        spacing: 2
+                        Text { text: "Total Base Consolidada:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                        Text { text: "$ " + payRoot.totalConsolidated.toLocaleString(Qt.locale(), "f", 2); font.pixelSize: 13; font.bold: true; color: theme.colorSuccess }
+                    }
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: 12
+
+                    Text {
+                        text: "🧮 Bono Contable Ingreso Manual:"
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: theme.textPrimary
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    TextField {
+                        id: txtBonusManual
+                        width: 120
+                        height: 34
+                        text: payRoot.calculatedBonus.toFixed(2)
+                        color: theme.isDark ? "#000000" : "#0F172A"
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                        validator: RegularExpressionValidator { regularExpression: /^[0-9]+(\.[0-9]{1,2})?$/ }
+                        background: Rectangle {
+                            color: "#FFFFFF"
+                            radius: 6
+                            border.color: theme.borderColor
+                            border.width: 1
+                        }
+                    }
+
+                    Button {
+                        height: 34
+                        width: 155
+                        contentItem: Text { text: "⚙️ Calcular (Simulación)"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSlate; radius: 6 }
+                        onClicked: {
+                            var calc = payRoot.totalConsolidated * 0.05
+                            txtBonusManual.text = calc.toFixed(2)
+                        }
+                    }
+
+                    Button {
+                        height: 34
+                        width: 165
+                        contentItem: Text { text: "✓ Confirmar y Registrar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSuccess; radius: 6 }
+                        onClicked: {
+                            var val = parseFloat(txtBonusManual.text) || 0.0
+                            var resStr = backend.registerManualBonus(val, "Ingreso manual desde Nómina de Socios")
+                            var res = JSON.parse(resStr)
+                            payMsgTxt.text = res.message
+                            payMsgDialog.open()
+                            payRoot.refresh()
+                        }
+                    }
                 }
             }
         }
