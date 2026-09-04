@@ -38,7 +38,12 @@ COLOR_DANGER = ("#DC2626", "#EF4444")           # Crimson Danger
 COLOR_DANGER_BG = ("#FEE2E2", "#451212")        # Crimson Pill Background
 
 # Rutas del Sistema
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import sys
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 DATA_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 

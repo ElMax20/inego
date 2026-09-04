@@ -6,6 +6,7 @@ ScrollView {
     clip: true
 
     property var products: []
+    property var supplierList: []
     property var selectedProduct: null
 
     Component.onCompleted: loadData("")
@@ -14,6 +15,9 @@ ScrollView {
         products = []
         var raw = backend.getInventoryData(searchTxt)
         products = JSON.parse(raw)
+
+        var rawS = backend.getSupplierNames()
+        supplierList = JSON.parse(rawS)
     }
 
     Column {
@@ -306,7 +310,7 @@ ScrollView {
             ComboBox {
                 id: providerCombo
                 width: parent.width
-                model: ["Sweet & Coffee S.A.", "Importadora Central GYE", "Amazon Business Corp USA", "Grainger Supplies Inc.", "Tiendamia Logistics Ecuador"]
+                model: invRoot.supplierList
             }
         }
 

@@ -6,6 +6,7 @@ ScrollView {
     clip: true
 
     property var suppliers: []
+    property var selectedSupplier: null
     property var categoryList: []
     property var filterCategoryList: []
     property string activeOrigen: "Todos los Orígenes"
@@ -166,20 +167,82 @@ ScrollView {
                         }
                     }
 
-                    Rectangle {
+                    Row {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        color: theme.badgeBgBronze
-                        radius: 6
-                        width: 110
-                        height: 26
+                        spacing: 10
 
-                        Text {
-                            anchors.centerIn: parent
-                            text: modelData.ubicacion.indexOf("Importación") !== -1 ? "Importador" : "Guayaquil"
-                            font.pixelSize: 10
-                            font.bold: true
-                            color: theme.colorBronze
+                        Rectangle {
+                            color: theme.badgeBgBronze
+                            radius: 6
+                            width: 110
+                            height: 26
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: modelData.ubicacion.indexOf("Importación") !== -1 ? "Importador" : "Guayaquil"
+                                font.pixelSize: 10
+                                font.bold: true
+                                color: theme.colorBronze
+                            }
+                        }
+
+                        // MENÚ TRES PUNTOS (⋮) - EXCLUSIVO ADMINISTRADOR
+                        Button {
+                            id: btnSupplierDots
+                            height: 28
+                            width: 28
+                            visible: backend.isAdmin()
+
+                            contentItem: Text {
+                                text: "⋮"
+                                color: theme.textPrimary
+                                font.bold: true
+                                font.pixelSize: 18
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            background: Rectangle {
+                                color: btnSupplierDots.hovered ? theme.bgCardHover : "transparent"
+                                radius: 14
+                                border.color: theme.borderColor
+                            }
+
+                            onClicked: supplierActionMenu.open()
+
+                            Menu {
+                                id: supplierActionMenu
+                                y: btnSupplierDots.height
+
+                                MenuItem {
+                                    text: "✏️ Modificar Proveedor"
+                                    onTriggered: {
+                                        supRoot.selectedSupplier = modelData
+                                        editSupRuc.text = modelData.ruc_cedula || ""
+                                        editSupName.text = modelData.nombre_empresa || ""
+                                        editSupContactName.text = modelData.contacto_nombre || ""
+                                        editSupContactPhone.text = modelData.telefono || ""
+                                        editSupEmail.text = modelData.email || ""
+                                        editSupAddress.text = modelData.direccion || ""
+
+                                        var typeIdx = editSupType.model.indexOf(modelData.ubicacion)
+                                        editSupType.currentIndex = typeIdx >= 0 ? typeIdx : 0
+
+                                        var catIdx = editSupCategoryCombo.model.indexOf(modelData.tipo_producto)
+                                        editSupCategoryCombo.currentIndex = catIdx >= 0 ? catIdx : 0
+
+                                        editSupplierDialog.open()
+                                    }
+                                }
+                                MenuItem {
+                                    text: "🗑️ Eliminar de Base de Datos"
+                                    onTriggered: {
+                                        supRoot.selectedSupplier = modelData
+                                        deleteSupplierDialog.open()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -572,6 +635,309 @@ ScrollView {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: supErrDialog.close()
+                }
+            }
+        }
+    }
+
+    // POPUP EDITAR PROVEEDOR (ADMIN)
+    // POPUP EDITAR PROVEEDOR (ADMIN)
+    Popup {
+        id: editSupplierDialog
+        parent: Overlay.overlay
+        x: Math.max(20, (parent.width - width) / 2)
+        y: Math.max(20, (parent.height - height) / 2)
+        width: 480
+        height: 580
+        modal: true
+        focus: true
+        closePolicy: Popup.NoAutoClose
+        padding: 0
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Item {
+            anchors.fill: parent
+
+            // BARRA SUPERIOR ARRASTRABLE CON EL MOUSE
+            Rectangle {
+                id: editSupTitleBar
+                width: parent.width
+                height: 42
+                color: theme.colorBronze
+                radius: 10
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "✏️ Modificar Datos del Proveedor (Mover con el Mouse)"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 12
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.SizeAllCursor
+                    property point dragOffset
+                    onPressed: function(mouse) { dragOffset = Qt.point(mouse.x, mouse.y) }
+                    onPositionChanged: function(mouse) {
+                        if (pressed) {
+                            editSupplierDialog.x = editSupplierDialog.x + (mouse.x - dragOffset.x)
+                            editSupplierDialog.y = editSupplierDialog.y + (mouse.y - dragOffset.y)
+                        }
+                    }
+                }
+            }
+
+            // CONTENIDO DEL FORMULARIO
+            ScrollView {
+                id: editSupScroll
+                anchors.top: editSupTitleBar.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: editSupBottomBar.top
+                anchors.margins: 14
+                clip: true
+
+                Column {
+                    width: editSupScroll.width - 20
+                    spacing: 12
+
+                    Text { text: "RUC del Proveedor (10-13 dígitos):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editSupRuc
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        inputMethodHints: Qt.ImhDigitsOnly
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Text { text: "Razón Social del Proveedor:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editSupName
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Text { text: "Categoría / Tipo de Producto:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    ComboBox {
+                        id: editSupCategoryCombo
+                        width: parent.width
+                        model: supRoot.categoryList
+                    }
+
+                    Text { text: "Contacto Principal:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editSupContactName
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Row {
+                        width: parent.width
+                        spacing: 12
+
+                        Column {
+                            width: (parent.width - 12) / 2
+                            spacing: 4
+                            Text { text: "Teléfono (9-10 dígitos):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: editSupContactPhone
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - 12) / 2
+                            spacing: 4
+                            Text { text: "Origen / Ubicación:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            ComboBox {
+                                id: editSupType
+                                width: parent.width
+                                model: ["Guayaquil", "Otras Provincias", "Importados (Amazon / Tiendamia)"]
+                            }
+                        }
+                    }
+
+                    Text { text: "Correo Electrónico:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editSupEmail
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Text { text: "Dirección del Proveedor:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editSupAddress
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+                }
+            }
+
+            // BARRA INFERIOR DE ACCIONES
+            Item {
+                id: editSupBottomBar
+                width: parent.width
+                height: 48
+                anchors.bottom: parent.bottom
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Button {
+                        width: 140
+                        height: 34
+                        contentItem: Text { text: "Guardar Cambios"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorBronze; radius: 6 }
+                        onClicked: {
+                            if (!supRoot.selectedSupplier) return
+                            var resStr = backend.updateSupplier(
+                                supRoot.selectedSupplier.id,
+                                editSupRuc.text.trim(),
+                                editSupName.text.trim(),
+                                editSupContactName.text.trim(),
+                                editSupContactPhone.text.trim(),
+                                editSupEmail.text.trim(),
+                                editSupAddress.text.trim(),
+                                editSupType.currentText,
+                                editSupCategoryCombo.currentText
+                            )
+                            var res = JSON.parse(resStr)
+                            if (!res.success) {
+                                supErrTxt.text = res.message
+                                supErrDialog.open()
+                            } else {
+                                editSupplierDialog.close()
+                                supRoot.loadCategoriesAndData()
+                            }
+                        }
+                    }
+
+                    Button {
+                        width: 100
+                        height: 34
+                        contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSlate; radius: 6 }
+                        onClicked: editSupplierDialog.close()
+                    }
+                }
+            }
+        }
+    }
+
+    // POPUP ELIMINAR PROVEEDOR (ADMIN)
+    Popup {
+        id: deleteSupplierDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        width: 420
+        height: 200
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorDanger
+            border.width: 2
+        }
+
+        contentItem: Column {
+            anchors.fill: parent
+            spacing: 14
+
+            Text {
+                text: "🗑️ Eliminar Proveedor"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorDanger
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
+
+            Text {
+                text: "¿Está seguro que desea eliminar al proveedor " + (supRoot.selectedSupplier ? supRoot.selectedSupplier.nombre_empresa : "") + " de la base de datos?\nEsta acción no se puede deshacer."
+                font.pixelSize: 11
+                color: theme.textPrimary
+                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
+
+                Button {
+                    height: 34
+                    width: 130
+                    contentItem: Text { text: "Sí, Eliminar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorDanger; radius: 6 }
+                    onClicked: {
+                        if (!supRoot.selectedSupplier) return
+                        var resStr = backend.deleteSupplier(supRoot.selectedSupplier.id)
+                        var res = JSON.parse(resStr)
+                        if (!res.success) {
+                            supErrTxt.text = res.message
+                            supErrDialog.open()
+                        } else {
+                            deleteSupplierDialog.close()
+                            supRoot.loadCategoriesAndData()
+                        }
+                    }
+                }
+
+                Button {
+                    height: 34
+                    width: 100
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: deleteSupplierDialog.close()
                 }
             }
         }

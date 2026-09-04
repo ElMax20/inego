@@ -6,6 +6,7 @@ ScrollView {
     clip: true
 
     property var clients: []
+    property var selectedClient: null
 
     Component.onCompleted: refresh()
 
@@ -118,6 +119,58 @@ ScrollView {
                             contentItem: Text { text: "Historial"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             background: Rectangle { color: theme.colorSlate; radius: 6 }
                             onClicked: historyPopup.openForClient(modelData.id, modelData.razon_social_nombre)
+                        }
+
+                        // MENÚ TRES PUNTOS (⋮) - EXCLUSIVO ADMINISTRADOR
+                        Button {
+                            id: btnClientDots
+                            height: 28
+                            width: 28
+                            visible: backend.isAdmin()
+
+                            contentItem: Text {
+                                text: "⋮"
+                                color: theme.textPrimary
+                                font.bold: true
+                                font.pixelSize: 18
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            background: Rectangle {
+                                color: btnClientDots.hovered ? theme.bgCardHover : "transparent"
+                                radius: 14
+                                border.color: theme.borderColor
+                            }
+
+                            onClicked: clientActionMenu.open()
+
+                            Menu {
+                                id: clientActionMenu
+                                y: btnClientDots.height
+
+                                MenuItem {
+                                    text: "✏️ Modificar Cliente"
+                                    onTriggered: {
+                                        cliRoot.selectedClient = modelData
+                                        editClientName.text = modelData.razon_social_nombre
+                                        editClientRuc.text = modelData.ruc_cedula
+                                        editClientPhone.text = modelData.telefono || ""
+                                        editClientEmail.text = modelData.email || ""
+                                        editClientAddress.text = modelData.direccion || ""
+                                        editClientProvincia.text = modelData.provincia || ""
+                                        editClientType.currentIndex = editClientType.model.indexOf(modelData.tipo_cliente) >= 0 ? editClientType.model.indexOf(modelData.tipo_cliente) : 0
+                                        editClientDialog.open()
+                                    }
+                                }
+                                MenuItem {
+                                    text: "🗑️ Eliminar de Base de Datos"
+                                    onTriggered: {
+                                        cliRoot.selectedClient = modelData
+                                        deleteClientDialog.open()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -646,6 +699,318 @@ ScrollView {
                             historyPopup.close()
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // POPUP EDITAR CLIENTE (ADMIN)
+    // POPUP EDITAR CLIENTE (ADMIN)
+    Popup {
+        id: editClientDialog
+        parent: Overlay.overlay
+        x: Math.max(20, (parent.width - width) / 2)
+        y: Math.max(20, (parent.height - height) / 2)
+        width: 480
+        height: 580
+        modal: true
+        focus: true
+        closePolicy: Popup.NoAutoClose
+        padding: 0
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Item {
+            anchors.fill: parent
+
+            // BARRA SUPERIOR ARRASTRABLE CON EL MOUSE
+            Rectangle {
+                id: editClientTitleBar
+                width: parent.width
+                height: 42
+                color: theme.colorBronze
+                radius: 10
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "✏️ Modificar Datos del Cliente (Mover con el Mouse)"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 12
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.SizeAllCursor
+                    property point dragOffset
+                    onPressed: function(mouse) { dragOffset = Qt.point(mouse.x, mouse.y) }
+                    onPositionChanged: function(mouse) {
+                        if (pressed) {
+                            editClientDialog.x = editClientDialog.x + (mouse.x - dragOffset.x)
+                            editClientDialog.y = editClientDialog.y + (mouse.y - dragOffset.y)
+                        }
+                    }
+                }
+            }
+
+            // CONTENIDO DEL FORMULARIO
+            ScrollView {
+                id: editClientScroll
+                anchors.top: editClientTitleBar.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: editClientBottomBar.top
+                anchors.margins: 14
+                clip: true
+
+                Column {
+                    width: editClientScroll.width - 20
+                    spacing: 10
+
+                    Text { text: "Razón Social / Nombre Completo:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editClientName
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Text { text: "Tipo de Cliente (B2B / B2C):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    ComboBox {
+                        id: editClientType
+                        width: parent.width
+                        model: ["B2B", "B2C"]
+                    }
+
+                    Text { text: "Cédula o RUC del Cliente (10 a 13 dígitos):"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editClientRuc
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        inputMethodHints: Qt.ImhDigitsOnly
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                        onTextChanged: {
+                            var r = text.trim();
+                            if (r.length >= 2) {
+                                var prefix = r.substring(0, 2);
+                                var provinces = {
+                                    "01": "Azuay", "02": "Bolívar", "03": "Cañar", "04": "Carchi",
+                                    "05": "Cotopaxi", "06": "Chimborazo", "07": "El Oro", "08": "Esmeraldas",
+                                    "09": "Guayas", "10": "Imbabura", "11": "Loja", "12": "Los Ríos",
+                                    "13": "Manabí", "14": "Morona Santiago", "15": "Napo", "16": "Pastaza",
+                                    "17": "Pichincha", "18": "Tungurahua", "19": "Zamora Chinchipe",
+                                    "20": "Galápagos", "21": "Sucumbíos", "22": "Orellana",
+                                    "23": "Santo Domingo de los Tsáchilas", "24": "Santa Elena", "30": "Extranjero"
+                                };
+                                editClientProvincia.text = provinces[prefix] || "Provincia no detectada";
+                            }
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        spacing: 12
+
+                        Column {
+                            width: (parent.width - 12) / 2
+                            spacing: 4
+                            Text { text: "Teléfono (10 dígitos con 0):"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: editClientPhone
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                validator: RegularExpressionValidator { regularExpression: /^[0-9]{9,10}$/ }
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - 12) / 2
+                            spacing: 4
+                            Text { text: "Provincia:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: editClientProvincia
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+                    }
+
+                    Text { text: "Correo Electrónico:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editClientEmail
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Text { text: "Dirección del Cliente:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editClientAddress
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+                }
+            }
+
+            // BARRA INFERIOR DE ACCIONES
+            Item {
+                id: editClientBottomBar
+                width: parent.width
+                height: 48
+                anchors.bottom: parent.bottom
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Button {
+                        width: 140
+                        height: 34
+                        contentItem: Text { text: "Guardar Cambios"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorBronze; radius: 6 }
+                        onClicked: {
+                            if (!cliRoot.selectedClient) return
+                            var ph = editClientPhone.text.trim()
+                            if (ph.length > 0 && (ph.length !== 10 || !ph.startsWith("0"))) {
+                                cliErrTxt.text = "⚠️ El número de teléfono debe tener exactamente 10 dígitos (incluyendo el 0 inicial)."
+                                cliErrDialog.open()
+                                return
+                            }
+                            var resStr = backend.updateClient(
+                                cliRoot.selectedClient.id,
+                                editClientName.text.trim(),
+                                editClientType.currentText,
+                                editClientRuc.text.trim(),
+                                ph,
+                                editClientEmail.text.trim(),
+                                editClientAddress.text.trim(),
+                                editClientProvincia.text.trim()
+                            )
+                            var res = JSON.parse(resStr)
+                            if (!res.success) {
+                                cliErrTxt.text = res.message
+                                cliErrDialog.open()
+                            } else {
+                                editClientDialog.close()
+                                cliRoot.refresh()
+                            }
+                        }
+                    }
+
+                    Button {
+                        width: 100
+                        height: 34
+                        contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSlate; radius: 6 }
+                        onClicked: editClientDialog.close()
+                    }
+                }
+            }
+        }
+    }
+
+    // POPUP ELIMINAR CLIENTE (ADMIN)
+    Popup {
+        id: deleteClientDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        width: 420
+        height: 200
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorDanger
+            border.width: 2
+        }
+
+        contentItem: Column {
+            anchors.fill: parent
+            spacing: 14
+
+            Text {
+                text: "🗑️ Eliminar Cliente"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorDanger
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
+
+            Text {
+                text: "¿Está seguro que desea eliminar al cliente " + (cliRoot.selectedClient ? cliRoot.selectedClient.razon_social_nombre : "") + " de la base de datos?\nEsta acción no se puede deshacer."
+                font.pixelSize: 11
+                color: theme.textPrimary
+                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
+
+                Button {
+                    height: 34
+                    width: 130
+                    contentItem: Text { text: "Sí, Eliminar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorDanger; radius: 6 }
+                    onClicked: {
+                        if (!cliRoot.selectedClient) return
+                        var ok = backend.deleteClient(cliRoot.selectedClient.id)
+                        if (ok) {
+                            deleteClientDialog.close()
+                            cliRoot.refresh()
+                        }
+                    }
+                }
+
+                Button {
+                    height: 34
+                    width: 100
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: deleteClientDialog.close()
                 }
             }
         }

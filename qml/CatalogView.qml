@@ -712,7 +712,7 @@ ScrollView {
             ComboBox {
                 id: providerCombo
                 width: parent.width
-                model: catRoot.suppliersList
+                model: catRoot.supplierList
             }
 
             Row {

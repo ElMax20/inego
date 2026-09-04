@@ -6,6 +6,7 @@ ScrollView {
     clip: true
 
     property var payroll: []
+    property var selectedPartner: null
     property real sueldoBaseFijo: 50.00
     property real bonoContable5: 1058.50
     property real totalNetoPorSocio: 1108.50
@@ -15,9 +16,48 @@ ScrollView {
     property real totalConsolidated: 21170.00
     property real calculatedBonus: 1058.50
 
+    property bool isRefreshing: false
+
+    Timer {
+        id: bonusDebounceTimer
+        interval: 150
+        repeat: false
+        onTriggered: payRoot.recalcBonus()
+    }
+
     Component.onCompleted: refresh()
 
+    function recalcBonus() {
+        var bVal = parseFloat(txtBonusManual.text)
+        if (isNaN(bVal) || bVal < 0) bVal = 0.0
+        bonoContable5 = bVal
+        totalNetoPorSocio = sueldoBaseFijo + bVal
+
+        var tempList = []
+        for (var i = 0; i < payroll.length; i++) {
+            var p = payroll[i]
+            var basePay = p.sueldo_base || sueldoBaseFijo
+            var ded = p.deducciones || 0.0
+            var netTotal = (basePay + bVal) - ded
+            
+            var updatedP = {
+                "id": p.id,
+                "nombre": p.nombre,
+                "cargo": p.cargo,
+                "sueldo_base": basePay,
+                "pago_fijo": basePay,
+                "bono_5": bVal,
+                "deducciones": ded,
+                "total": netTotal,
+                "estado": p.estado
+            }
+            tempList.push(updatedP)
+        }
+        payroll = tempList
+    }
+
     function refresh() {
+        isRefreshing = true
         var val = parseFloat(txtSueldoBase.text) || 50.00
         var raw = backend.getPayrollData(val)
         if (raw) {
@@ -27,19 +67,16 @@ ScrollView {
                 sueldoBaseFijo = data.sueldo_base_fijo || val
                 bonoContable5 = data.bono_contable_5 || 1058.50
                 totalNetoPorSocio = data.total_neto_por_socio || (val + bonoContable5)
+                salesBase = data.sales_base || 12450.00
+                purchasesBase = data.purchases_base || 8720.00
+                totalConsolidated = data.total_consolidated || 21170.00
+                calculatedBonus = data.calculated_bonus || 1058.50
+                txtBonusManual.text = bonoContable5.toFixed(2)
             } else {
                 payroll = data
             }
         }
-
-        var bRaw = backend.getBonusCalculationData()
-        if (bRaw) {
-            var bRes = JSON.parse(bRaw)
-            salesBase = bRes.sales_base || 12450.00
-            purchasesBase = bRes.purchases_base || 8720.00
-            totalConsolidated = bRes.total_consolidated || 21170.00
-            calculatedBonus = bRes.calculated_bonus || 1058.50
-        }
+        isRefreshing = false
     }
 
     Column {
@@ -161,6 +198,15 @@ ScrollView {
                             border.color: theme.borderColor
                             border.width: 1
                         }
+                        onTextChanged: {
+                            if (payRoot.isRefreshing) return
+                            var val = parseFloat(txtBonusManual.text)
+                            if (!isNaN(val) && val >= 0) {
+                                payRoot.bonoContable5 = val
+                                payRoot.totalNetoPorSocio = payRoot.sueldoBaseFijo + val
+                            }
+                            bonusDebounceTimer.restart()
+                        }
                     }
 
                     Button {
@@ -171,6 +217,9 @@ ScrollView {
                         onClicked: {
                             var calc = payRoot.totalConsolidated * 0.05
                             txtBonusManual.text = calc.toFixed(2)
+                            payRoot.bonoContable5 = calc
+                            payRoot.totalNetoPorSocio = payRoot.sueldoBaseFijo + calc
+                            payRoot.recalcBonus()
                         }
                     }
 
@@ -240,9 +289,13 @@ ScrollView {
                                 border.width: 1
                             }
                             onTextChanged: {
-                                var val = parseFloat(txtSueldoBase.text) || 50.00
-                                payRoot.sueldoBaseFijo = val
-                                payRoot.totalNetoPorSocio = val + payRoot.bonoContable5
+                                if (payRoot.isRefreshing) return
+                                var val = parseFloat(txtSueldoBase.text)
+                                if (!isNaN(val) && val >= 0) {
+                                    payRoot.sueldoBaseFijo = val
+                                    payRoot.totalNetoPorSocio = val + payRoot.bonoContable5
+                                }
+                                bonusDebounceTimer.restart()
                             }
                         }
                     }
@@ -399,6 +452,57 @@ ScrollView {
                                     var res = JSON.parse(resStr)
                                     payMsgTxt.text = res.message
                                     payMsgDialog.open()
+                                }
+                            }
+
+                            // MENÚ DE TRES PUNTOS (⋮) - EXCLUSIVO ADMINISTRADOR
+                            Button {
+                                id: btnPayrollDots
+                                height: 32
+                                width: 32
+                                visible: backend.isAdmin()
+
+                                contentItem: Text {
+                                    text: "⋮"
+                                    color: theme.textPrimary
+                                    font.bold: true
+                                    font.pixelSize: 18
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+
+                                background: Rectangle {
+                                    color: btnPayrollDots.hovered ? theme.bgCardHover : "transparent"
+                                    radius: 16
+                                    border.color: theme.borderColor
+                                }
+
+                                onClicked: payrollActionMenu.open()
+
+                                Menu {
+                                    id: payrollActionMenu
+                                    y: btnPayrollDots.height
+
+                                    MenuItem {
+                                        text: "✏️ Modificar Rol"
+                                        onTriggered: {
+                                            payRoot.selectedPartner = modelData
+                                            editPayrollName.text = modelData.nombre || ""
+                                            editPayrollCargo.text = modelData.cargo || ""
+                                            editPayrollSueldo.text = (modelData.sueldo_base || payRoot.sueldoBaseFijo).toFixed(2)
+                                            editPayrollBono.text = (modelData.bono_5 || 0.0).toFixed(2)
+                                            editPayrollDeducciones.text = (modelData.deducciones || 0.0).toFixed(2)
+                                            editPayrollStatus.currentIndex = editPayrollStatus.model.indexOf(modelData.estado) >= 0 ? editPayrollStatus.model.indexOf(modelData.estado) : 0
+                                            editPayrollDialog.open()
+                                        }
+                                    }
+                                    MenuItem {
+                                        text: "🗑️ Eliminar de Base de Datos"
+                                        onTriggered: {
+                                            payRoot.selectedPartner = modelData
+                                            deletePayrollDialog.open()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -708,6 +812,285 @@ ScrollView {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: payMsgDialog.close()
+                }
+            }
+        }
+    }
+
+    // POPUP EDITAR ROL DE PAGO DE SOCIO (ADMIN)
+    // POPUP EDITAR ROL DE PAGO DE SOCIO (ADMIN)
+    Popup {
+        id: editPayrollDialog
+        parent: Overlay.overlay
+        x: Math.max(20, (parent.width - width) / 2)
+        y: Math.max(20, (parent.height - height) / 2)
+        width: 480
+        height: 500
+        modal: true
+        focus: true
+        closePolicy: Popup.NoAutoClose
+        padding: 0
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorBronze
+            border.width: 2
+        }
+
+        contentItem: Item {
+            anchors.fill: parent
+
+            // BARRA SUPERIOR ARRASTRABLE CON EL MOUSE
+            Rectangle {
+                id: editPayrollTitleBar
+                width: parent.width
+                height: 42
+                color: theme.colorBronze
+                radius: 10
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "✏️ Modificar Rol de Pago del Socio (Mover con el Mouse)"
+                    color: "#FFFFFF"
+                    font.bold: true
+                    font.pixelSize: 12
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.SizeAllCursor
+                    property point dragOffset
+                    onPressed: function(mouse) { dragOffset = Qt.point(mouse.x, mouse.y) }
+                    onPositionChanged: function(mouse) {
+                        if (pressed) {
+                            editPayrollDialog.x = editPayrollDialog.x + (mouse.x - dragOffset.x)
+                            editPayrollDialog.y = editPayrollDialog.y + (mouse.y - dragOffset.y)
+                        }
+                    }
+                }
+            }
+
+            // CONTENIDO DEL FORMULARIO
+            ScrollView {
+                id: editPayrollScroll
+                anchors.top: editPayrollTitleBar.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: editPayrollBottomBar.top
+                anchors.margins: 14
+                clip: true
+
+                Column {
+                    width: editPayrollScroll.width - 20
+                    spacing: 12
+
+                    Text { text: "Nombre del Socio / Colaborador:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editPayrollName
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Text { text: "Cargo / Función del Socio:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    TextField {
+                        id: editPayrollCargo
+                        width: parent.width
+                        color: theme.inputColor
+                        font.bold: true
+                        font.pixelSize: 12
+                        selectionColor: theme.colorBronze
+                        selectedTextColor: "#FFFFFF"
+                        background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                    }
+
+                    Row {
+                        width: parent.width
+                        spacing: 10
+
+                        Column {
+                            width: (parent.width - 20) / 3
+                            spacing: 4
+                            Text { text: "Sueldo Base USD:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: editPayrollSueldo
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - 20) / 3
+                            spacing: 4
+                            Text { text: "Bono 5% USD:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: editPayrollBono
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+
+                        Column {
+                            width: (parent.width - 20) / 3
+                            spacing: 4
+                            Text { text: "Deducciones USD:"; font.pixelSize: 10; font.bold: true; color: theme.textMuted }
+                            TextField {
+                                id: editPayrollDeducciones
+                                width: parent.width
+                                color: theme.inputColor
+                                font.bold: true
+                                font.pixelSize: 12
+                                selectionColor: theme.colorBronze
+                                selectedTextColor: "#FFFFFF"
+                                background: Rectangle { color: theme.inputBg; radius: 6; border.color: theme.borderColor }
+                            }
+                        }
+                    }
+
+                    Text { text: "Estado del Rol de Pago:"; font.pixelSize: 11; font.bold: true; color: theme.textMuted }
+                    ComboBox {
+                        id: editPayrollStatus
+                        width: parent.width
+                        model: ["Calculado", "Aprobado", "Pagado"]
+                    }
+                }
+            }
+
+            // BARRA INFERIOR DE ACCIONES
+            Item {
+                id: editPayrollBottomBar
+                width: parent.width
+                height: 48
+                anchors.bottom: parent.bottom
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 12
+
+                    Button {
+                        width: 140
+                        height: 34
+                        contentItem: Text { text: "Guardar Cambios"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorBronze; radius: 6 }
+                        onClicked: {
+                            if (!payRoot.selectedPartner) return
+                            var sb = parseFloat(editPayrollSueldo.text) || 0
+                            var b5 = parseFloat(editPayrollBono.text) || 0
+                            var ded = parseFloat(editPayrollDeducciones.text) || 0
+                            var name = editPayrollName.text.trim()
+                            var cargo = editPayrollCargo.text.trim()
+                            var st = editPayrollStatus.currentText
+
+                            var resStr = backend.updatePayroll(payRoot.selectedPartner.id, name, cargo, sb, b5, ded, st)
+                            var res = JSON.parse(resStr)
+                            if (!res.success) {
+                                payMsgTxt.text = res.message
+                                payMsgDialog.open()
+                            } else {
+                                editPayrollDialog.close()
+                                payRoot.refresh()
+                            }
+                        }
+                    }
+
+                    Button {
+                        width: 100
+                        height: 34
+                        contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: theme.colorSlate; radius: 6 }
+                        onClicked: editPayrollDialog.close()
+                    }
+                }
+            }
+        }
+    }
+
+    // POPUP ELIMINAR ROL DE PAGO DE SOCIO (ADMIN)
+    Popup {
+        id: deletePayrollDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        width: 420
+        height: 200
+        padding: 16
+
+        Overlay.modal: Rectangle { color: "#60000000" }
+
+        background: Rectangle {
+            color: theme.bgCard
+            radius: 12
+            border.color: theme.colorDanger
+            border.width: 2
+        }
+
+        contentItem: Column {
+            anchors.fill: parent
+            spacing: 14
+
+            Text {
+                text: "🗑️ Eliminar Rol de Pago"
+                font.pixelSize: 15
+                font.bold: true
+                color: theme.colorDanger
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
+
+            Text {
+                text: "¿Está seguro que desea eliminar el rol de pago de " + (payRoot.selectedPartner ? payRoot.selectedPartner.nombre : "") + " de la base de datos?\nEsta acción no se puede deshacer."
+                font.pixelSize: 11
+                color: theme.textPrimary
+                wrapMode: Text.Wrap
+                horizontalAlignment: Text.AlignHCenter
+                width: parent.width
+            }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 12
+
+                Button {
+                    height: 34
+                    width: 130
+                    contentItem: Text { text: "Sí, Eliminar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorDanger; radius: 6 }
+                    onClicked: {
+                        if (!payRoot.selectedPartner) return
+                        var ok = backend.deletePayroll(payRoot.selectedPartner.id)
+                        if (ok) {
+                            deletePayrollDialog.close()
+                            payRoot.refresh()
+                        }
+                    }
+                }
+
+                Button {
+                    height: 34
+                    width: 100
+                    contentItem: Text { text: "Cancelar"; color: "#FFFFFF"; font.bold: true; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: theme.colorSlate; radius: 6 }
+                    onClicked: deletePayrollDialog.close()
                 }
             }
         }

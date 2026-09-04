@@ -248,6 +248,16 @@ class DatabaseManager:
                 );
                 """)
 
+                try:
+                    cursor.execute("ALTER TABLE roles_pago ADD COLUMN cargo TEXT DEFAULT 'Socio Directivo'")
+                except Exception:
+                    pass
+
+                try:
+                    cursor.execute("ALTER TABLE roles_pago ADD COLUMN deducciones REAL DEFAULT 0.00")
+                except Exception:
+                    pass
+
                 cursor.execute("""
                 CREATE TABLE IF NOT EXISTS ordenes_venta (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

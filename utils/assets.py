@@ -10,8 +10,18 @@ def sync_logo():
     if os.path.exists(SOURCE_LOGO_PATH):
         try:
             shutil.copy2(SOURCE_LOGO_PATH, TARGET_LOGO_PATH)
+            return TARGET_LOGO_PATH
         except Exception:
             pass
+    
+    root_logo = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logo.png")
+    if os.path.exists(root_logo):
+        try:
+            shutil.copy2(root_logo, TARGET_LOGO_PATH)
+            return TARGET_LOGO_PATH
+        except Exception:
+            return root_logo
+            
     return TARGET_LOGO_PATH
 
 def generate_tree_of_life_image(width=120, height=120):

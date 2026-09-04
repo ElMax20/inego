@@ -408,10 +408,11 @@ class BackendBridge(QObject):
         if not ok_rc:
             return json.dumps({"success": False, "message": msg_rc})
 
-        # Validar teléfono (Exactamente 9 dígitos numéricos)
+        # Validar teléfono (Exactamente 10 dígitos numéricos incluyendo el 0 inicial)
         tel_clean = telefono.strip()
-        if not (len(tel_clean) == 9 and tel_clean.isdigit()):
-            return json.dumps({"success": False, "message": "⚠️ Número de teléfono no válido: Debe contener exactamente 9 dígitos numéricos."})
+        ok_p, msg_p = validate_phone(tel_clean)
+        if not ok_p:
+            return json.dumps({"success": False, "message": msg_p})
 
         # Validar correo
         if email and email.strip() != "N/A":
@@ -446,8 +447,10 @@ class BackendBridge(QObject):
                 "cliente_telefono": q["cliente_telefono"] or "N/A",
                 "fecha_emision": q["fecha_emision"],
                 "subtotal": float(q["subtotal"] or 0.0),
+                "iva": float(q["iva"] or 0.0),
                 "total": float(q["total"] or 0.0),
                 "estado": q["estado"],
+                "observaciones": q["observaciones"] or "",
                 "es_credito_72dias": bool(q["es_credito_72dias"])
             })
         return json.dumps(result)
@@ -472,8 +475,10 @@ class BackendBridge(QObject):
                 "cliente_telefono": q["cliente_telefono"] or "N/A",
                 "fecha_emision": str(q["fecha_emision"]),
                 "subtotal": float(q["subtotal"] or 0.0),
+                "iva": float(q["iva"] or 0.0),
                 "total": float(q["total"] or 0.0),
                 "estado": q["estado"],
+                "observaciones": q["observaciones"] or "",
                 "es_credito_72dias": bool(q["es_credito_72dias"])
             })
         return json.dumps(result)
@@ -489,6 +494,21 @@ class BackendBridge(QObject):
             fecha_venc = (datetime.now() + timedelta(days=dias)).strftime("%Y-%m-%d")
             numero_cot = f"COT-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
+            if subtotal < 0 or iva < 0 or total < 0:
+                return json.dumps({"success": False, "message": "⚠️ Error: No se pueden guardar cotizaciones con subtotales o montos negativos."})
+
+            items = json.loads(items_json)
+            if not items:
+                return json.dumps({"success": False, "message": "⚠️ Agregue al menos un producto a la cotización."})
+
+            for item in items:
+                qty = float(item.get('cantidad', 0))
+                pv = float(item.get('precio_venta', 0))
+                if qty <= 0:
+                    return json.dumps({"success": False, "message": "⚠️ Error: Ítem con cantidad no válida (debe ser mayor a 0)."})
+                if pv < 0:
+                    return json.dumps({"success": False, "message": "⚠️ Error: Ítem con precio de venta negativo no permitido."})
+
             query_cot = """
                 INSERT INTO cotizaciones (numero_cotizacion, cliente_id, fecha_emision, fecha_vencimiento, es_credito_72dias, estado, subtotal, iva, total)
                 VALUES (%s, %s, %s, %s, %s, 'Pendiente', %s, %s, %s)
@@ -498,7 +518,6 @@ class BackendBridge(QObject):
                 1 if es_b2b else 0, subtotal, iva, total
             ))
 
-            items = json.loads(items_json)
             for item in items:
                 sub_linea = float(item['cantidad']) * float(item['precio_venta'])
                 query_det = """
@@ -639,69 +658,60 @@ class BackendBridge(QObject):
             return json.dumps({"success": False, "message": f"Error al guardar gasto: {str(e)}"})
 
     @Slot(float, result=str)
-    @Slot(result=str)
     def getPayrollData(self, base_fijo=50.00):
-        """ Retorna los Roles de Pago de Socios (RF4.4) consolidando el Sueldo Fijo (Modificable, $50 por defecto) + Bono Contable (RF4.3) """
+        """ Retorna los Roles de Pago de Socios (RF4.4) desde la base de datos SQLite con persistencia total """
         try:
             fixed_pay = float(base_fijo or 50.00)
             
             r_ventas = db.fetch_one("SELECT SUM(total) as total FROM cotizaciones WHERE estado IN ('Facturada', 'Aprobada')")
-            sales_val = float(r_ventas['total'] or 0.0) if r_ventas else 12450.00
+            sales_val = float(r_ventas['total'] or 0.0) if r_ventas and r_ventas['total'] else 12450.00
             
             r_gastos = db.fetch_one("SELECT SUM(monto) as total FROM gastos")
-            purchases_val = float(r_gastos['total'] or 0.0) if r_gastos else 8720.00
+            purchases_val = float(r_gastos['total'] or 0.0) if r_gastos and r_gastos['total'] else 8720.00
             
             total_consolidated = sales_val + purchases_val
-            bonus_val = total_consolidated * 0.05
-            if bonus_val <= 0:
-                bonus_val = 1058.50
+            calculated_bonus = total_consolidated * 0.05
+
+            r_bono = db.fetch_one("SELECT monto_bono_calculado FROM roles_pago ORDER BY id ASC LIMIT 1")
+            if r_bono and r_bono.get('monto_bono_calculado') and float(r_bono['monto_bono_calculado']) > 0:
+                bonus_val = float(r_bono['monto_bono_calculado'])
+            else:
+                bonus_val = calculated_bonus if calculated_bonus > 0 else 1058.50
             
-            total_pay = fixed_pay + bonus_val
-            
-            partners = [
-                {
-                    "id": 1,
-                    "nombre": "Socio 1 - Administrador de Dinero",
-                    "cargo": "Dirección Financiera",
-                    "sueldo_base": fixed_pay,
-                    "pago_fijo": fixed_pay,
-                    "bono_5": bonus_val,
-                    "deducciones": 0.00,
-                    "total": total_pay,
-                    "estado": "Aprobado"
-                },
-                {
-                    "id": 2,
-                    "nombre": "Socio 2 - Compras y Mercadería",
-                    "cargo": "Gestión de Proveedores e Inventario",
-                    "sueldo_base": fixed_pay,
-                    "pago_fijo": fixed_pay,
-                    "bono_5": bonus_val,
-                    "deducciones": 0.00,
-                    "total": total_pay,
-                    "estado": "Calculado"
-                },
-                {
-                    "id": 3,
-                    "nombre": "Socio 3 - Proceso Contable",
-                    "cargo": "Supervisión Contable e Impuestos",
-                    "sueldo_base": fixed_pay,
-                    "pago_fijo": fixed_pay,
-                    "bono_5": bonus_val,
-                    "deducciones": 0.00,
-                    "total": total_pay,
-                    "estado": "Calculado"
-                }
-            ]
-            if hasattr(self, '_custom_payroll_partners') and self._custom_payroll_partners:
-                for cp in self._custom_payroll_partners:
-                    partners.append(cp)
+            db_roles = db.fetch_all("SELECT * FROM roles_pago ORDER BY id ASC")
+            if not db_roles:
+                db.execute_query("INSERT INTO roles_pago (socio_nombre, cargo, monto_fijo, monto_bono_calculado, deducciones, total_pagar, estado) VALUES ('Socio 1 - Administrador de Dinero', 'Dirección Financiera', %s, %s, 0.00, %s, 'Aprobado')", (fixed_pay, bonus_val, fixed_pay + bonus_val))
+                db.execute_query("INSERT INTO roles_pago (socio_nombre, cargo, monto_fijo, monto_bono_calculado, deducciones, total_pagar, estado) VALUES ('Socio 2 - Compras y Mercadería', 'Gestión de Proveedores e Inventario', %s, %s, 0.00, %s, 'Calculado')", (fixed_pay, bonus_val, fixed_pay + bonus_val))
+                db.execute_query("INSERT INTO roles_pago (socio_nombre, cargo, monto_fijo, monto_bono_calculado, deducciones, total_pagar, estado) VALUES ('Socio 3 - Proceso Contable', 'Supervisión Contable e Impuestos', %s, %s, 0.00, %s, 'Calculado')", (fixed_pay, bonus_val, fixed_pay + bonus_val))
+                db_roles = db.fetch_all("SELECT * FROM roles_pago ORDER BY id ASC")
+
+            partners = []
+            for r in db_roles:
+                s_base = fixed_pay
+                b_val = float(r.get('monto_bono_calculado') or bonus_val)
+                ded = float(r.get('deducciones') or 0.0)
+                tot = (s_base + b_val) - ded
+                partners.append({
+                    "id": r['id'],
+                    "nombre": r.get('socio_nombre') or 'Socio Directivo',
+                    "cargo": r.get('cargo') or 'Dirección General',
+                    "sueldo_base": s_base,
+                    "pago_fijo": s_base,
+                    "bono_5": b_val,
+                    "deducciones": ded,
+                    "total": tot,
+                    "estado": r.get('estado') or 'Calculado'
+                })
 
             return json.dumps({
                 "success": True,
                 "sueldo_base_fijo": fixed_pay,
                 "bono_contable_5": bonus_val,
-                "total_neto_por_socio": total_pay,
+                "total_neto_por_socio": fixed_pay + bonus_val,
+                "sales_base": sales_val,
+                "purchases_base": purchases_val,
+                "total_consolidated": total_consolidated,
+                "calculated_bonus": calculated_bonus,
                 "partners": partners
             })
         except Exception as e:
@@ -718,6 +728,10 @@ class BackendBridge(QObject):
                 "sueldo_base_fijo": fixed_pay,
                 "bono_contable_5": bonus_val,
                 "total_neto_por_socio": total_pay,
+                "sales_base": 12450.00,
+                "purchases_base": 8720.00,
+                "total_consolidated": 21170.00,
+                "calculated_bonus": bonus_val,
                 "partners": partners
             })
 
@@ -883,28 +897,38 @@ class BackendBridge(QObject):
             })
 
     @Slot(float, str, result=str)
-    def registerManualBonus(self, bonus_val, note):
+    def registerManualBonus(self, bonus_val, note=""):
         """ Ingreso Manual y Registro Confirmado del Bono Contable (5%) restringido a Socio 1 / Administrador """
-        if self._current_user and self._current_user.get('rol') not in ('Administrador', 'Administrador de Dinero', 'Dirección Financiera'):
-            return json.dumps({"success": False, "message": "⚠️ Seguridad: Solo Socio 1 (Administrador de Dinero) puede autorizar este bono."})
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Seguridad: Solo el Administrador puede autorizar este bono."})
         
         if bonus_val <= 0:
             return json.dumps({"success": False, "message": "⚠️ Por favor ingrese un valor de bono contable válido mayor a 0."})
         
-        AuditLogModel.log(user_name, "Cálculo y Registro de Bono (5%)", f"Autorizó y confirmó Bono Contable de ${bonus_val:,.2f} USD. Nota: {note_str}")
-        
-        # Sincronización y exportación automática a Excel de ventas
         try:
-            from utils.excel_generator import export_sales_to_excel
-            from config import DATA_DIR
-            cons_path = os.path.join(DATA_DIR, "Reporte_Ventas_Inego_Consolidado.xlsx")
-            export_sales_to_excel(output_path=cons_path)
-            last_excel = export_sales_to_excel()
-            file_name = os.path.basename(last_excel)
-            return json.dumps({"success": True, "message": f"✅ Registro confirmado exitosamente. Las ventas han sido registradas y actualizadas en el documento Excel: {file_name}"})
-        except Exception as ex_sync:
-            print(f"[EXCEL SYNC ERROR] {ex_sync}")
-            return json.dumps({"success": True, "message": f"✅ Bono Contable de ${bonus_val:,.2f} USD confirmado y registrado exitosamente."})
+            # Actualizar en la base de datos roles_pago para todos los socios
+            db.execute_query("""
+                UPDATE roles_pago 
+                SET monto_bono_calculado = %s, total_pagar = (monto_fijo + %s - deducciones)
+            """, (bonus_val, bonus_val))
+
+            user_name = self._current_user['nombre_completo'] if self._current_user else "Administrador"
+            note_str = note if note else "Ingreso manual desde Nómina de Socios"
+
+            AuditLogModel.log(user_name, "Cálculo y Registro de Bono (5%)", f"Autorizó y confirmó Bono Contable de ${bonus_val:,.2f} USD. Nota: {note_str}")
+            
+            # Sincronización y exportación automática a Excel de ventas
+            try:
+                from utils.excel_generator import export_sales_to_excel
+                from config import DATA_DIR
+                cons_path = os.path.join(DATA_DIR, "Reporte_Ventas_Inego_Consolidado.xlsx")
+                export_sales_to_excel(output_path=cons_path)
+            except Exception as ex_sync:
+                print(f"[EXCEL SYNC ERROR] {ex_sync}")
+
+            return json.dumps({"success": True, "message": f"✅ Bono Contable de ${bonus_val:,.2f} USD confirmado y registrado exitosamente en la base de datos."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al registrar bono: {str(e)}"})
 
     @Slot(result=str)
     def getUsersData(self):
@@ -986,3 +1010,259 @@ class BackendBridge(QObject):
         if self._current_user:
             AuditLogModel.log(self._current_user['nombre_completo'], "Cierre de Sesión QML", "El usuario cerró sesión en la UI QML")
         self._current_user = None
+
+    @Slot(result=bool)
+    def isAdmin(self):
+        """ Retorna True si el usuario activo tiene rol de Administrador """
+        if not self._current_user:
+            return True
+        rol = str(self._current_user.get("rol", "")).strip().lower()
+        return "admin" in rol or "administrador" in rol or rol == "administrador de dinero"
+
+    @Slot(int, result=str)
+    def getQuoteItems(self, quote_id):
+        """ Obtiene los productos/ítems detallados de una cotización específica """
+        try:
+            items = db.fetch_all("""
+                SELECT cd.*, p.nombre_producto, p.codigo_sku, p.precio_referencial
+                FROM cotizacion_detalles cd
+                LEFT JOIN productos p ON cd.producto_id = p.id
+                WHERE cd.cotizacion_id = %s
+                ORDER BY cd.id ASC
+            """, (quote_id,))
+            result = []
+            for it in items:
+                cant = int(float(it["cantidad"] or 0))
+                pv = float(it["precio_venta_unitario"] or 0.0)
+                pc = float(it["precio_costo_unitario"] or it.get("precio_referencial") or 0.0)
+                sub = float(it["subtotal_linea"] or (cant * pv))
+                raw_name = it["nombre_producto"] or "Producto Desconocido"
+                clean_name = raw_name.replace("[Proveedor: ", "- Proveedor: ").replace("[", "").replace("]", "").strip()
+                result.append({
+                    "id": it["id"],
+                    "producto_id": it["producto_id"],
+                    "nombre": clean_name,
+                    "codigo": it["codigo_sku"] or "",
+                    "cantidad": cant,
+                    "precio_costo": pc,
+                    "precio_venta": pv,
+                    "subtotal_linea": sub
+                })
+            return json.dumps(result)
+        except Exception as e:
+            print(f"[getQuoteItems ERROR] {e}")
+            return json.dumps([])
+
+    # 1. COTIZACIONES (MODIFICAR Y ELIMINAR BASE DE DATOS)
+    @Slot(int, str, str, float, float, float, str, result=str)
+    def updateQuote(self, quote_id, estado, observaciones, subtotal, iva, total, items_json=""):
+        """ Modifica una cotización existente en la base de datos (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede modificar cotizaciones."})
+        try:
+            if subtotal < 0 or iva < 0 or total < 0:
+                return json.dumps({"success": False, "message": "⚠️ Error: No se permiten montos negativos en la cotización."})
+
+            db.execute_query(
+                "UPDATE cotizaciones SET estado = %s, observaciones = %s, subtotal = %s, iva = %s, total = %s WHERE id = %s",
+                (estado, observaciones, subtotal, iva, total, quote_id)
+            )
+
+            if items_json and items_json.strip() != "":
+                items = json.loads(items_json)
+                if not items:
+                    return json.dumps({"success": False, "message": "⚠️ Error: La cotización debe conservar al menos un producto."})
+
+                for item in items:
+                    qty = int(float(item.get('cantidad', 0)))
+                    pv = float(item.get('precio_venta', 0))
+                    if qty <= 0:
+                        return json.dumps({"success": False, "message": "⚠️ Error: Ítem con cantidad no válida (debe ser mayor a 0)."})
+                    if pv < 0:
+                        return json.dumps({"success": False, "message": "⚠️ Error: Ítem con precio de venta negativo no permitido."})
+
+                db.execute_query("DELETE FROM cotizacion_detalles WHERE cotizacion_id = %s", (quote_id,))
+                for item in items:
+                    qty = int(float(item.get('cantidad', 0)))
+                    pv = float(item.get('precio_venta', 0))
+                    pc = float(item.get('precio_costo', 0))
+                    sub_linea = qty * pv
+                    db.execute_query("""
+                        INSERT INTO cotizacion_detalles (cotizacion_id, producto_id, cantidad, precio_costo_unitario, precio_venta_unitario, subtotal_linea)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (quote_id, item['producto_id'], qty, pc, pv, sub_linea))
+
+            try:
+                from utils.excel_generator import export_sales_to_excel
+                from config import DATA_DIR
+                cons_path = os.path.join(DATA_DIR, "Reporte_Ventas_Inego_Consolidado.xlsx")
+                export_sales_to_excel(output_path=cons_path)
+            except Exception as ex_excel:
+                print(f"[AUTO EXCEL UPDATE ERROR] {ex_excel}")
+
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Edición de Cotización", f"Modificó cotización ID #{quote_id} (Estado: {estado}, Total: ${total:,.2f})")
+            return json.dumps({"success": True, "message": f"Cotización #{quote_id} actualizada correctamente en la base de datos."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al actualizar cotización: {str(e)}"})
+
+    @Slot(int, result=str)
+    def deleteQuote(self, quote_id):
+        """ Elimina una cotización directamente de la base de datos (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede eliminar cotizaciones."})
+        try:
+            db.execute_query("DELETE FROM cotizacion_detalles WHERE cotizacion_id = %s", (quote_id,))
+            db.execute_query("DELETE FROM ordenes_venta WHERE cotizacion_id = %s", (quote_id,))
+            db.execute_query("DELETE FROM cotizaciones WHERE id = %s", (quote_id,))
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Eliminación de Cotización", f"Eliminó permanentemente la cotización ID #{quote_id} de la base de datos")
+            return json.dumps({"success": True, "message": f"Cotización #{quote_id} eliminada permanentemente de la base de datos."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al eliminar cotización: {str(e)}"})
+
+    # 2. CLIENTES (MODIFICAR Y ELIMINAR BASE DE DATOS)
+    @Slot(int, str, str, str, str, str, str, str, result=str)
+    def updateClient(self, client_id, razon_social_nombre, tipo_cliente, ruc_cedula, telefono, email, direccion, provincia_pais):
+        """ Modifica un cliente en la base de datos con validaciones estrictas (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede modificar clientes."})
+        
+        if not razon_social_nombre or not ruc_cedula or not telefono:
+            return json.dumps({"success": False, "message": "⚠️ Complete los datos obligatorios del cliente."})
+
+        rc_clean = ruc_cedula.strip()
+        ok_rc, msg_rc = validate_cedula_or_ruc(rc_clean)
+        if not ok_rc:
+            return json.dumps({"success": False, "message": msg_rc})
+
+        tel_clean = telefono.strip()
+        ok_p, msg_p = validate_phone(tel_clean)
+        if not ok_p:
+            return json.dumps({"success": False, "message": msg_p})
+
+        if email and email.strip() != "N/A":
+            ok_e, msg_e = validate_email(email)
+            if not ok_e:
+                return json.dumps({"success": False, "message": msg_e})
+
+        try:
+            db.execute_query("""
+                UPDATE clientes 
+                SET razon_social_nombre = %s, tipo_cliente = %s, ruc_cedula = %s, 
+                    telefono = %s, email = %s, direccion = %s, provincia_pais = %s
+                WHERE id = %s
+            """, (razon_social_nombre.strip(), tipo_cliente, rc_clean, tel_clean, email.strip() if email else "N/A", direccion.strip() if direccion else "Guayaquil", provincia_pais if provincia_pais else "Guayas", client_id))
+
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Edición de Cliente", f"Modificó cliente ID #{client_id}: {razon_social_nombre}")
+            return json.dumps({"success": True, "message": f"Cliente '{razon_social_nombre}' actualizado exitosamente."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al actualizar cliente: {str(e)}"})
+
+    @Slot(int, result=str)
+    def deleteClient(self, client_id):
+        """ Elimina un cliente directamente de la base de datos (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede eliminar clientes."})
+        try:
+            db.execute_query("DELETE FROM clientes WHERE id = %s", (client_id,))
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Eliminación de Cliente", f"Eliminó permanentemente al cliente ID #{client_id} de la base de datos")
+            return json.dumps({"success": True, "message": f"Cliente ID #{client_id} eliminado permanentemente de la base de datos."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al eliminar cliente: {str(e)}"})
+
+    # 3. NÓMINA DE SOCIOS (MODIFICAR Y ELIMINAR BASE DE DATOS)
+    @Slot(int, str, str, float, float, float, str, result=str)
+    def updatePayroll(self, partner_id, nombre, cargo, sueldo_base, bono, deducciones, estado):
+        """ Modifica el rol de pago de un socio en la base de datos (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede modificar la nómina."})
+        try:
+            total_neto = (sueldo_base + bono) - deducciones
+            db.execute_query("""
+                UPDATE roles_pago
+                SET socio_nombre = %s, cargo = %s, monto_fijo = %s, monto_bono_calculado = %s, 
+                    deducciones = %s, total_pagar = %s, estado = %s
+                WHERE id = %s
+            """, (nombre, cargo, sueldo_base, bono, deducciones, total_neto, estado, partner_id))
+
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Edición de Rol de Pago", f"Modificó rol de socio ID #{partner_id}: {nombre} (Neto: ${total_neto:,.2f})")
+            return json.dumps({"success": True, "message": f"Rol de pago de '{nombre}' actualizado en la base de datos."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al actualizar rol de pago: {str(e)}"})
+
+    @Slot(int, result=str)
+    def deletePayroll(self, partner_id):
+        """ Elimina el rol de pago de un socio de la base de datos (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede eliminar registros de nómina."})
+        try:
+            db.execute_query("DELETE FROM roles_pago WHERE id = %s", (partner_id,))
+            if hasattr(self, '_custom_payroll_partners') and self._custom_payroll_partners:
+                self._custom_payroll_partners = [p for p in self._custom_payroll_partners if p.get('id') != partner_id]
+
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Eliminación de Rol de Pago", f"Eliminó permanentemente el rol de pago ID #{partner_id} de la base de datos")
+            return json.dumps({"success": True, "message": f"Rol de pago ID #{partner_id} eliminado permanentemente de la base de datos."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al eliminar rol de pago: {str(e)}"})
+
+    # 4. PROVEEDORES (MODIFICAR Y ELIMINAR BASE DE DATOS)
+    @Slot(int, str, str, str, str, str, str, str, str, result=str)
+    def updateSupplier(self, supplier_id, ruc_cedula, nombre_empresa, contacto_nombre, telefono, email, direccion, ubicacion, tipo_producto):
+        """ Modifica un proveedor en la base de datos con validaciones estrictas (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede modificar proveedores."})
+
+        if not ruc_cedula or not nombre_empresa or not contacto_nombre or not telefono:
+            return json.dumps({"success": False, "message": "Por favor llene todos los campos obligatorios del proveedor."})
+
+        rc_clean = ruc_cedula.strip()
+        ok_rc, msg_rc = validate_ruc(rc_clean)
+        if not ok_rc:
+            return json.dumps({"success": False, "message": msg_rc})
+
+        tel_clean = telefono.strip()
+        ok_p, msg_p = validate_phone(tel_clean)
+        if not ok_p:
+            return json.dumps({"success": False, "message": msg_p})
+
+        if email and email.strip() != "N/A":
+            ok_e, msg_e = validate_email(email)
+            if not ok_e:
+                return json.dumps({"success": False, "message": msg_e})
+
+        type_clean = "Guayaquil" if (ubicacion and "Guayaquil" in ubicacion) else ubicacion
+        prod_type_clean = tipo_producto.strip() if (tipo_producto and tipo_producto.strip()) else "Insumos Industriales"
+
+        try:
+            db.execute_query("""
+                UPDATE proveedores
+                SET ruc_cedula = %s, nombre_empresa = %s, contacto_nombre = %s,
+                    telefono = %s, email = %s, direccion = %s, ubicacion = %s,
+                    tipo_proveedor = %s, tipo_producto = %s
+                WHERE id = %s
+            """, (rc_clean, nombre_empresa.strip(), contacto_nombre.strip(), tel_clean, email.strip() if email else "N/A", direccion.strip() if direccion else "Guayaquil", type_clean, type_clean, prod_type_clean, supplier_id))
+
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Edición de Proveedor", f"Modificó proveedor ID #{supplier_id}: {nombre_empresa}")
+            return json.dumps({"success": True, "message": f"Proveedor '{nombre_empresa}' actualizado exitosamente."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al actualizar proveedor: {str(e)}"})
+
+    @Slot(int, result=str)
+    def deleteSupplier(self, supplier_id):
+        """ Elimina un proveedor directamente de la base de datos (Exclusivo Admin) """
+        if not self.isAdmin():
+            return json.dumps({"success": False, "message": "⚠️ Acceso Denegado: Solo el Administrador puede eliminar proveedores."})
+        try:
+            db.execute_query("DELETE FROM proveedores WHERE id = %s", (supplier_id,))
+            if self._current_user:
+                AuditLogModel.log(self._current_user['nombre_completo'], "Eliminación de Proveedor", f"Eliminó permanentemente el proveedor ID #{supplier_id} de la base de datos")
+            return json.dumps({"success": True, "message": f"Proveedor ID #{supplier_id} eliminado permanentemente de la base de datos."})
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"Error al eliminar proveedor: {str(e)}"})
+
